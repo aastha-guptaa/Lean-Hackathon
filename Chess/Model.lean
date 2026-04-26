@@ -36,8 +36,11 @@ abbrev Board := Vector (Vector Square 8) 8
 -- take a board, piece and coordinates
 -- possible positions move to
 
-abbrev Pos := Fin 8 × Fin 8
+--abbrev Pos := Fin 8 × Fin 8
 
+structure Pos where
+  row : Fin 8
+  col : Fin 8
 
 structure PiecePos where
   colPiece : ColourPiece
@@ -55,12 +58,12 @@ structure SquarePos where
   pos : Pos
 
 def Board.getSquare (board: Board) (pos: Pos) : Square :=
-  (board.get pos.1).get pos.2
+  (board.get pos.col).get pos.row
 
---vector.set
+--vector.se
 
 def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
-  board.set pos.1 ((board.get pos.1).set pos.2 square)
+  board.set pos.col ((board.get pos.col).set pos.row square)
 
 structure Move where
   fromPos : Pos
@@ -72,5 +75,3 @@ def Board.applyMove (board: Board) (m: Move) : Board :=
   let piece := board.getSquare m.fromPos
   let boardAfterPick := board.setSquare m.fromPos none
   boardAfterPick.setSquare m.toPos piece
-
-
