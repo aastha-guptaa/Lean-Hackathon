@@ -54,5 +54,23 @@ structure SquarePos where
   square : Square
   pos : Pos
 
-def Board.getSquare (board: Board) (pos: Pos) : Square := 
+def Board.getSquare (board: Board) (pos: Pos) : Square :=
   (board.get pos.1).get pos.2
+
+--vector.set
+
+def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
+  board.set pos.1 ((board.get pos.1).set pos.2 square)
+
+structure Move where
+  fromPos : Pos
+  toPos   : Pos
+
+/-- Applies a move by moving whatever is at `fromPos` to `toPos`, leaving `fromPos` empty.
+    Note: This does not validate if the move is legal according to chess rules. -/
+def Board.applyMove (board: Board) (m: Move) : Board :=
+  let piece := board.getSquare m.fromPos
+  let boardAfterPick := board.setSquare m.fromPos none
+  boardAfterPick.setSquare m.toPos piece
+
+
