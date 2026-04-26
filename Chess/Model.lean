@@ -63,12 +63,12 @@ structure SquarePos where
   pos : Pos
 
 def Board.getSquare (board: Board) (pos: Pos) : Square :=
-  (board.get pos.col).get pos.row
+  (board.get pos.row).get pos.col
 
 --vector.se
 
 def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
-  board.set pos.col ((board.get pos.col).set pos.row square)
+  board.set pos.row ((board.get pos.row).set pos.col square)
 
 structure Move where
   fromPos : Pos
@@ -244,3 +244,16 @@ def isPseudoLegalMove (state : GameState) (m : Move) : Bool :=
       | Piece.bishop => isValidBishopMove state.board m.fromPos m.toPos
       | Piece.queen  => isValidQueenMove state.board m.fromPos m.toPos
       | Piece.king   => isValidKingMove state.board m.fromPos m.toPos
+
+/-- Checks if a piece can move from one position to another.
+    Uses pseudo-legal validation (correct piece movement, path clear, not capturing own piece).
+    Does NOT check if the move leaves the king in check. -/
+def Board.canMove (board: Board) (piecePos: PiecePos) (destPos: Pos) : Bool :=
+  let state : GameState := {
+    board := board,
+    turn := piecePos.colPiece.colour,
+    castling := {},
+    enPassant := none
+  }
+  let move : Move := { fromPos := piecePos.pos, toPos := destPos }
+  isPseudoLegalMove state move

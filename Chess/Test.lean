@@ -1,5 +1,5 @@
 import Chess.Model
-
+import Chess.Display
 -- ==========================================
 -- Helper to create pieces quickly
 -- ==========================================
@@ -16,25 +16,21 @@ def em : Square := none
 -- ==========================================
 
 def startingBoard : Board :=
-  -- Board is COLUMN-major: outer index = col (a=0..h=7), inner index = row (0..7)
-  -- getSquare does board.get pos.col, then .get pos.row
+  -- Board is ROW-major: outer index = row (0..7), inner index = col (a=0..h=7)
   #v[
-    -- Col 0 (a-file): rook(w), pawn(w), empty×4, pawn(b), rook(b)
-    #v[ wp .rook, wp .pawn, em, em, em, em, bp .pawn, bp .rook ],
-    -- Col 1 (b-file): knight(w), pawn(w), empty×4, pawn(b), knight(b)
-    #v[ wp .knight, wp .pawn, em, em, em, em, bp .pawn, bp .knight ],
-    -- Col 2 (c-file): bishop(w), pawn(w), empty×4, pawn(b), bishop(b)
-    #v[ wp .bishop, wp .pawn, em, em, em, em, bp .pawn, bp .bishop ],
-    -- Col 3 (d-file): queen(w), pawn(w), empty×4, pawn(b), queen(b)
-    #v[ wp .queen, wp .pawn, em, em, em, em, bp .pawn, bp .queen ],
-    -- Col 4 (e-file): king(w), pawn(w), empty×4, pawn(b), king(b)
-    #v[ wp .king, wp .pawn, em, em, em, em, bp .pawn, bp .king ],
-    -- Col 5 (f-file): bishop(w), pawn(w), empty×4, pawn(b), bishop(b)
-    #v[ wp .bishop, wp .pawn, em, em, em, em, bp .pawn, bp .bishop ],
-    -- Col 6 (g-file): knight(w), pawn(w), empty×4, pawn(b), knight(b)
-    #v[ wp .knight, wp .pawn, em, em, em, em, bp .pawn, bp .knight ],
-    -- Col 7 (h-file): rook(w), pawn(w), empty×4, pawn(b), rook(b)
-    #v[ wp .rook, wp .pawn, em, em, em, em, bp .pawn, bp .rook ]
+    -- Row 0: white back rank
+    #v[ wp .rook, wp .knight, wp .bishop, wp .queen, wp .king, wp .bishop, wp .knight, wp .rook ],
+    -- Row 1: white pawns
+    #v[ wp .pawn, wp .pawn, wp .pawn, wp .pawn, wp .pawn, wp .pawn, wp .pawn, wp .pawn ],
+    -- Row 2-5: empty
+    #v[ em, em, em, em, em, em, em, em ],
+    #v[ em, em, em, em, em, em, em, em ],
+    #v[ em, em, em, em, em, em, em, em ],
+    #v[ em, em, em, em, em, em, em, em ],
+    -- Row 6: black pawns
+    #v[ bp .pawn, bp .pawn, bp .pawn, bp .pawn, bp .pawn, bp .pawn, bp .pawn, bp .pawn ],
+    -- Row 7: black back rank
+    #v[ bp .rook, bp .knight, bp .bishop, bp .queen, bp .king, bp .bishop, bp .knight, bp .rook ]
   ]
 
 def startState : GameState :=
@@ -63,6 +59,40 @@ def mkMove (r1 c1 r2 c2 : Nat)
 deriving instance Repr for Piece
 deriving instance Repr for Colour
 deriving instance Repr for ColourPiece
+
+-- ==========================================
+-- TEST: Board.canMove
+-- ==========================================
+
+-- Valid white pawn move: e2 -> e3
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
+  { row := 2, col := 4 }  -- should be true
+
+-- Valid white pawn move: e2 -> e4 (double step from start)
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
+  { row := 3, col := 4 }  -- should be true
+
+-- Invalid white pawn move: e2 -> e5 (too far)
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
+  { row := 4, col := 4 }  -- should be false
+
+-- Valid knight move: b1 -> c3
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.knight, colour := Colour.white }, pos := { row := 0, col := 1 } }
+  { row := 2, col := 2 }  -- should be true
+
+-- Invalid knight move: b1 -> d2 (blocked by own pawn)
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.knight, colour := Colour.white }, pos := { row := 0, col := 1 } }
+  { row := 1, col := 3 }  -- should be false
+
+-- Move from empty square (3,3)
+#eval startingBoard.canMove
+  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 3, col := 3 } }
+  { row := 4, col := 4 }  -- should be false (no piece at source)
 
 -- ==========================================
 -- TEST: Board access
@@ -125,6 +155,7 @@ deriving instance Repr for ColourPiece
 -- White queen d1->d3 (blocked by own pawn at d2): should be FALSE
 #eval isPseudoLegalMove startState (mkMove 0 3 2 3)
 
+#eval startingBoard
 -- ==========================================
 -- Summary of expected results
 -- ==========================================
