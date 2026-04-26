@@ -54,5 +54,5 @@ structure SquarePos where
   square : Square
   pos : Pos
 
-def Board.getSquare (board: Board) (pos: Pos) : Square :=
---
+def Board.getSquare (board: Board) (pos: Pos) : Square := 
+  (board.get pos.1).get pos.2
