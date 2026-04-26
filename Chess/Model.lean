@@ -47,8 +47,8 @@ structure Pos where
   col : Fin 8
 deriving BEq
 
-structure PiecePos where
-  colPiece : ColourPiece
+structure ColourPiecePos where
+  colourPiece : ColourPiece
   pos : Pos
 
 -- struct use, kind of like named tuple
@@ -71,15 +71,15 @@ def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
   board.set pos.row ((board.get pos.row).set pos.col square)
 
 structure Move where
-  fromPos : Pos
-  toPos   : Pos
+  colourPiecePos : ColourPiecePos
+  toPos : Pos
 
 /-- Applies a move by moving whatever is at `fromPos` to `toPos`, leaving `fromPos` empty.
     Note: This does not validate if the move is legal according to chess rules. -/
-def Board.applyMove (board: Board) (m: Move) : Board :=
-  let piece := board.getSquare m.fromPos
-  let boardAfterPick := board.setSquare m.fromPos none
-  boardAfterPick.setSquare m.toPos piece
+def Board.forceMove (board : Board) (move : Move) : Board :=
+  let piece := move.colourPiecePos.colourPiece
+  let boardWithoutPiece := board.setSquare move.colourPiecePos.pos none
+  boardWithoutPiece.setSquare move.toPos piece
 
 -- ==========================================
 -- Game State (needed for castling & en passant)
@@ -120,31 +120,49 @@ def isValidTarget (board : Board) (colour : Colour) (toPos : Pos) : Bool :=
   | none    => true
   | some cp => cp.colour != colour
 
-/-- Check if all squares strictly between fromPos and toPos are empty.
-    Assumes the move is along a straight line or diagonal. -/
-def isPathClear (board : Board) (fromPos toPos : Pos) : Bool :=
-  let dc := posDist toPos.col fromPos.col
+def getDists (fromPos toPos : Pos) : Int × Int :=
   let dr := posDist toPos.row fromPos.row
-  let stepC : Int := if dc > 0 then 1 else if dc < 0 then -1 else 0
-  let stepR : Int := if dr > 0 then 1 else if dr < 0 then -1 else 0
-  let steps := max dc.natAbs dr.natAbs
-  if steps ≤ 1 then true
+  let dc := posDist toPos.col fromPos.col
+  (dr, dc)
+
+def isStraight (fromPos toPos : Pos) : Bool :=
+  let (dr, dc) := getDists fromPos toPos
+  (dc == 0 || dr == 0)
+
+def isDiagonal (fromPos toPos : Pos) : Bool :=
+  let (dr, dc) := getDists fromPos toPos
+  (dc == dr && dc != 0)
+
+def isStraightOrDiagonal (fromPos toPos : Pos) : Bool :=
+  (isStraight fromPos toPos) || (isDiagonal fromPos toPos)
+
+/-- Check if all squares strictly between fromPos and toPos are empty.
+    The square at toPos can be non-empty (a capture move). -/
+def isPathClear (board : Board) (fromPos toPos : Pos) : Bool :=
+  if !(isStraightOrDiagonal fromPos toPos) then
+    false
   else
-    let rec loop (i : Nat) (fuel : Nat) : Bool :=
-      match fuel with
-      | 0 => true
-      | fuel' + 1 =>
-        if i ≥ steps then true
-        else
-          let c := (fromPos.col.val : Int) + stepC * i
-          let r := (fromPos.row.val : Int) + stepR * i
-          match intToFin8 c, intToFin8 r with
-          | some cf, some rf =>
-            match board.getSquare { col := cf, row := rf } with
-            | some _ => false   -- blocked!
-            | none   => loop (i + 1) fuel'
-          | _, _ => false       -- out of bounds
-    loop 1 7  -- at most 7 intermediate squares on an 8×8 board
+    let (dr, dc) := getDists fromPos toPos
+    let stepC : Int := if dc > 0 then 1 else if dc < 0 then -1 else 0
+    let stepR : Int := if dr > 0 then 1 else if dr < 0 then -1 else 0
+    let steps := max dc.natAbs dr.natAbs
+    if steps ≤ 1 then true
+    else
+      let rec loop (i : Nat) (fuel : Nat) : Bool :=
+        match fuel with
+        | 0 => true
+        | fuel' + 1 =>
+          if i ≥ steps then true
+          else
+            let c := (fromPos.col.val : Int) + stepC * i
+            let r := (fromPos.row.val : Int) + stepR * i
+            match intToFin8 c, intToFin8 r with
+            | some cf, some rf =>
+              match board.getSquare { col := cf, row := rf } with
+              | some _ => false   -- blocked!
+              | none   => loop (i + 1) fuel'
+            | _, _ => false       -- out of bounds
+      loop 1 7  -- at most 7 intermediate squares on an 8×8 board
 
 -- ==========================================
 -- Piece-specific move rules
@@ -168,8 +186,7 @@ def isValidBishopMove (board : Board) (fromPos toPos : Pos) : Bool :=
 def isValidQueenMove (board : Board) (fromPos toPos : Pos) : Bool :=
   isValidRookMove board fromPos toPos || isValidBishopMove board fromPos toPos
 
-
-def isValidKingMove (board : Board) (fromPos toPos : Pos) : Bool :=
+def isValidKingMove (fromPos toPos : Pos) : Bool :=
   let dc := posDist toPos.col fromPos.col
   let dr := posDist toPos.row fromPos.row
   -- Standard one-square move
@@ -194,31 +211,27 @@ else if dc.natAbs == 2 && dr == 0 then
   else false
 -/
 
-def isValidPawnMove (state : GameState) (fromPos toPos : Pos) : Bool :=
-  let dc := posDist toPos.col fromPos.col
-  let dr := posDist toPos.row fromPos.row
-  let dir : Int := match state.turn with | Colour.white => 1 | Colour.black => -1
-  let startRow : Nat := match state.turn with | Colour.white => 1 | Colour.black => 6
-  let target := state.board.getSquare toPos
-  -- Forward moves (no capture)
-  if dc == 0 then
-    if dr == dir then
-      target.isNone  -- single step forward
-    else if dr == 2 * dir && fromPos.row.val == startRow then
-      target.isNone && isPathClear state.board fromPos toPos  -- double step from start
-    else false
-  -- Diagonal captures
-  else if dc.natAbs == 1 && dr == dir then
-    match target with
-    | some cp => cp.colour != state.turn  -- standard capture
-    | none =>
-      -- En passant
-      match state.enPassant with
-      | some epCol =>
-        let epRow : Nat := match state.turn with | Colour.white => 4 | Colour.black => 3
-        toPos.col == epCol && fromPos.row.val == epRow
-      | none => false
-  else false
+def validPawnMoveHelper (move : Int × Int) (isUp : Bool) : Bool :=
+  let dir := if isUp then
+    (1,2)
+  else
+    (-1,-2)
+  (move == (dir.2,0)) || (move == (dir.1,0)) || (move == (dir.1,dir.1))
+
+def isValidPawnMove (board : Board) (colour : Colour) (fromPos toPos : Pos) : Bool :=
+  let move := getDists fromPos toPos
+  let (dr, dc) := move
+  match colour with
+  | .white =>
+    if validPawnMoveHelper move true then
+      sorry
+    else
+      false
+  | .black =>
+    if validPawnMoveHelper move false then
+      sorry
+    else
+      false
 
 -- ==========================================
 -- Main move validator
@@ -226,34 +239,34 @@ def isValidPawnMove (state : GameState) (fromPos toPos : Pos) : Bool :=
 
 /-- Checks if a move is pseudo-legal: correct piece geometry, path is clear,
     not capturing own piece. Does NOT check if the king is left in check. -/
-def isPseudoLegalMove (state : GameState) (m : Move) : Bool :=
-  match state.board.getSquare m.fromPos with
+def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
+  match state.board.getSquare move.colourPiecePos.pos with
   | none => false
   | some cp =>
     -- Must move your own colour
     if cp.colour != state.turn then false
     -- Cannot stay in place
-    else if m.fromPos == m.toPos then false
+    else if move.colourPiecePos.pos == move.toPos then false
     -- Cannot capture your own piece
-    else if !(isValidTarget state.board state.turn m.toPos) then false
+    else if !(isValidTarget state.board state.turn move.toPos) then false
     -- Piece-specific rule
     else match cp.piece with
-      | Piece.pawn   => isValidPawnMove state m.fromPos m.toPos
-      | Piece.knight => isValidKnightMove m.fromPos m.toPos
-      | Piece.rook   => isValidRookMove state.board m.fromPos m.toPos
-      | Piece.bishop => isValidBishopMove state.board m.fromPos m.toPos
-      | Piece.queen  => isValidQueenMove state.board m.fromPos m.toPos
-      | Piece.king   => isValidKingMove state.board m.fromPos m.toPos
+      | Piece.pawn   => isValidPawnMove state.board move.colourPiecePos.colourPiece.colour move.colourPiecePos.pos move.toPos
+      | Piece.knight => isValidKnightMove move.colourPiecePos.pos move.toPos
+      | Piece.rook   => isValidRookMove state.board move.colourPiecePos.pos move.toPos
+      | Piece.bishop => isValidBishopMove state.board move.colourPiecePos.pos move.toPos
+      | Piece.queen  => isValidQueenMove state.board move.colourPiecePos.pos move.toPos
+      | Piece.king   => isValidKingMove move.colourPiecePos.pos move.toPos
 
 /-- Checks if a piece can move from one position to another.
     Uses pseudo-legal validation (correct piece movement, path clear, not capturing own piece).
     Does NOT check if the move leaves the king in check. -/
-def Board.canMove (board: Board) (piecePos: PiecePos) (destPos: Pos) : Bool :=
+def Board.canMove (board: Board) (colourPiecePos: ColourPiecePos) (destPos: Pos) : Bool :=
   let state : GameState := {
     board := board,
-    turn := piecePos.colPiece.colour,
+    turn := colourPiecePos.colourPiece.colour,
     castling := {},
     enPassant := none
   }
-  let move : Move := { fromPos := piecePos.pos, toPos := destPos }
+  let move : Move := { colourPiecePos := colourPiecePos, toPos := destPos }
   isPseudoLegalMove state move
