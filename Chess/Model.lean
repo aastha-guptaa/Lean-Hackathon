@@ -218,20 +218,60 @@ def validPawnMoveHelper (move : Int × Int) (isUp : Bool) : Bool :=
     (-1,-2)
   (move == (dir.2,0)) || (move == (dir.1,0)) || (move == (dir.1,dir.1))
 
-def isValidPawnMove (board : Board) (colour : Colour) (fromPos toPos : Pos) : Bool :=
-  let move := getDists fromPos toPos
-  let (dr, dc) := move
-  match colour with
-  | .white =>
-    if validPawnMoveHelper move true then
-      sorry
-    else
-      false
-  | .black =>
-    if validPawnMoveHelper move false then
-      sorry
-    else
-      false
+-- def isValidPawnMove (board : Board) (colour : Colour) (fromPos toPos : Pos) : Bool :=
+--   let move := getDists fromPos toPos
+--   let (dr, dc) := move
+--   match colour with
+--   | .white =>
+--     if validPawnMoveHelper move true then
+--       sorry
+--     else
+--       false
+--   | .black =>
+--     if validPawnMoveHelper move false then
+--       sorry
+--     else
+--       false
+
+
+def isSquareEmpty (board : Board) (pos : Pos) : Bool :=
+  (board.getSquare pos).isNone
+
+/-- Valid pawn moves:
+    • 1 square forward into an empty square
+    • 2 squares forward from the starting row, if both squares ahead are empty
+    • 1 square diagonally forward to capture an enemy piece
+    • 1 square diagonally forward for en passant (target square empty, but enemy
+      pawn is beside us and just double-stepped) -/
+def isValidPawnMove (state : GameState) (fromPos toPos : Pos) : Bool :=
+  let dc := posDist toPos.col fromPos.col   -- column delta
+  let dr := posDist toPos.row fromPos.row   -- row delta
+  let forward : Int := match state.turn with | .white => 1  | .black => -1
+  let homeRow : Nat  := match state.turn with | .white => 1  | .black => 6
+  match dc, dr with
+  -- Single push: same column, one step forward, target must be empty
+  | 0, d => if d == forward then
+               isSquareEmpty state.board toPos
+             -- Double push: same column, two steps forward, on home row,
+             -- both the intermediate and target squares must be empty
+             else if d == 2 * forward && fromPos.row.val == homeRow then
+               match intToFin8 ((fromPos.row.val : Int) + forward) with
+               | some midRow =>
+                   isSquareEmpty state.board { row := midRow, col := fromPos.col }
+                   && isSquareEmpty state.board toPos
+               | none => false
+             else false
+  -- Diagonal capture: one column left or right, one step forward
+  | _, d => if dc.natAbs == 1 && d == forward then
+              match state.board.getSquare toPos with
+              | some cp => cp.colour != state.turn          -- normal capture
+              | none    =>                                   -- en passant
+                match state.enPassant with
+                | some epCol =>
+                  let epRow : Nat := match state.turn with | .white => 4 | .black => 3
+                  toPos.col == epCol && fromPos.row.val == epRow
+                | none => false
+            else false
 
 -- ==========================================
 -- Main move validator
@@ -251,7 +291,7 @@ def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
     else if !(isValidTarget state.board state.turn move.toPos) then false
     -- Piece-specific rule
     else match cp.piece with
-      | Piece.pawn   => isValidPawnMove state.board move.colourPiecePos.colourPiece.colour move.colourPiecePos.pos move.toPos
+      | Piece.pawn   => isValidPawnMove state move.colourPiecePos.pos move.toPos
       | Piece.knight => isValidKnightMove move.colourPiecePos.pos move.toPos
       | Piece.rook   => isValidRookMove state.board move.colourPiecePos.pos move.toPos
       | Piece.bishop => isValidBishopMove state.board move.colourPiecePos.pos move.toPos
