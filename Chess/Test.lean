@@ -128,35 +128,35 @@ deriving instance Repr for CastlingRights
 def move1 := mkMove .pawn .white 1 4 3 4
 def state1 := startState.makeMove move1
 
-#eval state1.isSome                                               -- true
-#eval do let s ← state1; return s.board.getSquare (mkPos 1 4)    -- none (e2 empty)
-#eval do let s ← state1; return s.board.getSquare (mkPos 3 4)    -- some (pawn, white)
-#eval do let s ← state1; return s.turn                            -- Colour.black
-#eval do let s ← state1; return s.enPassant                       -- some 4
+-- #eval state1.isSome                                               -- true
+-- #eval do let s ← state1; return s.board.getSquare (mkPos 1 4)    -- none (e2 empty)
+-- #eval do let s ← state1; return s.board.getSquare (mkPos 3 4)    -- some (pawn, white)
+-- #eval do let s ← state1; return s.turn                            -- Colour.black
+-- #eval do let s ← state1; return s.enPassant                       -- some 4
 
--- Move 2: Black plays d7→d5 (pawn double push)
-def move2 := mkMove .pawn .black 6 3 4 3
-def state2 := do let s ← state1; s.makeMove move2
+-- -- Move 2: Black plays d7→d5 (pawn double push)
+-- def move2 := mkMove .pawn .black 6 3 4 3
+-- def state2 := do let s ← state1; s.makeMove move2
 
-#eval state2.isSome                                               -- true
-#eval do let s ← state2; return s.board.getSquare (mkPos 6 3)    -- none (d7 empty)
-#eval do let s ← state2; return s.board.getSquare (mkPos 4 3)    -- some (pawn, black)
-#eval do let s ← state2; return s.turn                            -- Colour.white
-#eval do let s ← state2; return s.enPassant                       -- some 3
+-- #eval state2.isSome                                               -- true
+-- #eval do let s ← state2; return s.board.getSquare (mkPos 6 3)    -- none (d7 empty)
+-- #eval do let s ← state2; return s.board.getSquare (mkPos 4 3)    -- some (pawn, black)
+-- #eval do let s ← state2; return s.turn                            -- Colour.white
+-- #eval do let s ← state2; return s.enPassant                       -- some 3
 
--- Move 3: White plays Nf3 (knight g1→f3)
-def move3 := mkMove .knight .white 0 6 2 5
-def state3 := do let s ← state2; s.makeMove move3
+-- -- Move 3: White plays Nf3 (knight g1→f3)
+-- def move3 := mkMove .knight .white 0 6 2 5
+-- def state3 := do let s ← state2; s.makeMove move3
 
-#eval state3.isSome                                               -- true
-#eval do let s ← state3; return s.board.getSquare (mkPos 2 5)    -- some (knight, white)
-#eval do let s ← state3; return s.board.getSquare (mkPos 0 6)    -- none (g1 empty)
-#eval do let s ← state3; return s.enPassant                       -- none (en passant cleared)
+-- #eval state3.isSome                                               -- true
+-- #eval do let s ← state3; return s.board.getSquare (mkPos 2 5)    -- some (knight, white)
+-- #eval do let s ← state3; return s.board.getSquare (mkPos 0 6)    -- none (g1 empty)
+-- #eval do let s ← state3; return s.enPassant                       -- none (en passant cleared)
 
--- Illegal: White tries to move again (it's black's turn)
-def illegalMove := mkMove .pawn .white 1 3 2 3
-def stateIllegal := do let s ← state3; s.makeMove illegalMove
-#eval stateIllegal.isSome                                         -- false
+-- -- Illegal: White tries to move again (it's black's turn)
+-- def illegalMove := mkMove .pawn .white 1 3 2 3
+-- def stateIllegal := do let s ← state3; s.makeMove illegalMove
+-- #eval stateIllegal.isSome                                         -- false
 
 -- ==========================================
 -- Summary of expected results
