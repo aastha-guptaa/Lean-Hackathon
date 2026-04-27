@@ -22,3 +22,17 @@ def Square.toIcon (square: Square) : String :=
 
 instance : Repr Square where
   reprPrec square _ := square.toIcon
+
+#check Vector.foldl
+
+def vecToString {n : Nat} (v : Vector Square n) : String :=
+  v.foldl (fun s sq => s ++ sq.toIcon) ""
+
+instance : Repr Board where
+  reprPrec board _ :=
+    board.foldl (fun s row => s ++ vecToString row ++ "\n") ""
+
+instance : Repr GameState where
+  reprPrec gs n := reprPrec gs.board n
+
+
