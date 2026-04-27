@@ -98,6 +98,9 @@ structure GameState where
   turn      : Colour
   castling  : CastlingRights
   enPassant : Option (Fin 8)  -- column of a pawn that just moved two steps
+  valid     : Bool
+  moveNum   : Nat
+  history   : List Move
 
 -- ==========================================
 -- Helper functions
@@ -303,10 +306,14 @@ def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
     Does NOT check if the move leaves the king in check. -/
 def Board.canMove (board: Board) (colourPiecePos: ColourPiecePos) (destPos: Pos) : Bool :=
   let state : GameState := {
-    board := board,
-    turn := colourPiecePos.colourPiece.colour,
-    castling := {},
+    board := board
+    turn := colourPiecePos.colourPiece.colour
+    castling := {}
     enPassant := none
+    valid := true
+    moveNum := 0
+    history := [],
+
   }
   let move : Move := { colourPiecePos := colourPiecePos, toPos := destPos }
   isPseudoLegalMove state move
@@ -362,9 +369,9 @@ def computeEnPassant (piece : Piece) (fromPos toPos : Pos) : Option (Fin 8) :=
       • castling rights updated
       • en passant column updated
       • en passant captures handled (enemy pawn removed) -/
-def GameState.makeMove (state : GameState) (move : Move) : Option GameState :=
+def GameState.makeMove (state : GameState) (move : Move) : GameState :=
   if !isPseudoLegalMove state move then
-    none
+    {state with valid := false}
   else
     let fromPos := move.colourPiecePos.pos
     let toPos   := move.toPos
@@ -392,12 +399,12 @@ def GameState.makeMove (state : GameState) (move : Move) : Option GameState :=
     let newEnPassant := computeEnPassant piece.piece fromPos toPos
 
     -- 5. Flip the turn
-    some {
+    {
       board     := newBoard
       turn      := state.turn.opponent
       castling  := newCastling
       enPassant := newEnPassant
+      valid     := true
+      moveNum   := state.moveNum + 1
+      history   := move :: state.history
     }
-
-
-    
