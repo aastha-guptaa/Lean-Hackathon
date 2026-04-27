@@ -33,11 +33,15 @@ def startingBoard : Board :=
     #v[ bp .rook, bp .knight, bp .bishop, bp .queen, bp .king, bp .bishop, bp .knight, bp .rook ]
   ]
 
+#eval startingBoard
+
 def startState : GameState :=
   { board     := startingBoard
     turn      := Colour.white
     castling  := {}    -- all castling rights default to true
     enPassant := none }
+
+#eval startState
 
 -- ==========================================
 -- Position & Move helpers
