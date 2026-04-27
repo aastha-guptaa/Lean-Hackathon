@@ -40,17 +40,20 @@ def startState : GameState :=
     enPassant := none }
 
 -- ==========================================
--- Helper to create positions easily
--- mkPos row col
+-- Position & Move helpers
 -- ==========================================
 
 def mkPos (r c : Nat) (hr : r < 8 := by omega) (hc : c < 8 := by omega) : Pos :=
   { row := ⟨r, hr⟩, col := ⟨c, hc⟩ }
 
-def mkMove (r1 c1 r2 c2 : Nat)
+/-- Create a Move given piece, colour, from (row,col), to (row,col). -/
+def mkMove (piece : Piece) (colour : Colour) (r1 c1 r2 c2 : Nat)
     (hr1 : r1 < 8 := by omega) (hc1 : c1 < 8 := by omega)
     (hr2 : r2 < 8 := by omega) (hc2 : c2 < 8 := by omega) : Move :=
-  { fromPos := mkPos r1 c1, toPos := mkPos r2 c2 }
+  { colourPiecePos := {
+      colourPiece := { piece := piece, colour := colour }
+      pos := mkPos r1 c1 }
+    toPos := mkPos r2 c2 }
 
 -- ==========================================
 -- Derive Repr for pretty #eval output
@@ -59,40 +62,8 @@ def mkMove (r1 c1 r2 c2 : Nat)
 deriving instance Repr for Piece
 deriving instance Repr for Colour
 deriving instance Repr for ColourPiece
-
--- ==========================================
--- TEST: Board.canMove
--- ==========================================
-
--- Valid white pawn move: e2 -> e3
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
-  { row := 2, col := 4 }  -- should be true
-
--- Valid white pawn move: e2 -> e4 (double step from start)
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
-  { row := 3, col := 4 }  -- should be true
-
--- Invalid white pawn move: e2 -> e5 (too far)
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 1, col := 4 } }
-  { row := 4, col := 4 }  -- should be false
-
--- Valid knight move: b1 -> c3
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.knight, colour := Colour.white }, pos := { row := 0, col := 1 } }
-  { row := 2, col := 2 }  -- should be true
-
--- Invalid knight move: b1 -> d2 (blocked by own pawn)
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.knight, colour := Colour.white }, pos := { row := 0, col := 1 } }
-  { row := 1, col := 3 }  -- should be false
-
--- Move from empty square (3,3)
-#eval startingBoard.canMove
-  { colPiece := { piece := Piece.pawn, colour := Colour.white }, pos := { row := 3, col := 3 } }
-  { row := 4, col := 4 }  -- should be false (no piece at source)
+deriving instance Repr for Pos
+deriving instance Repr for CastlingRights
 
 -- ==========================================
 -- TEST: Board access
@@ -106,68 +77,96 @@ deriving instance Repr for ColourPiece
 #eval startingBoard.getSquare (mkPos 3 3)
 
 -- ==========================================
--- TEST: Valid pawn moves
+-- TEST: isPseudoLegalMove
 -- ==========================================
 
--- White pawn e2->e3 (row 1, col 4 -> row 2, col 4): should be TRUE
-#eval isPseudoLegalMove startState (mkMove 1 4 2 4)
+-- White pawn e2→e3: should be TRUE
+#eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 2 4)
 
--- White pawn e2->e4 (two-step from start): should be TRUE
-#eval isPseudoLegalMove startState (mkMove 1 4 3 4)
+-- White pawn e2→e4 (two-step): should be TRUE
+#eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 3 4)
 
--- White pawn e2->e5 (three steps): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 1 4 4 4)
-
--- ==========================================
--- TEST: Invalid moves
--- ==========================================
+-- White pawn e2→e5 (three steps): should be FALSE
+#eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 4 4)
 
 -- Moving from empty square (3,3): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 3 3 4 4)
+#eval isPseudoLegalMove startState (mkMove .pawn .white 3 3 4 3)
 
--- Moving black piece on white's turn (6,4): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 6 4 5 4)
+-- Moving black piece on white's turn: should be FALSE
+#eval isPseudoLegalMove startState (mkMove .pawn .black 6 4 5 4)
+
+-- White knight b1→c3: should be TRUE
+#eval isPseudoLegalMove startState (mkMove .knight .white 0 1 2 2)
+
+-- White knight b1→a3: should be TRUE
+#eval isPseudoLegalMove startState (mkMove .knight .white 0 1 2 0)
+
+-- White knight b1→d2 (blocked by own pawn): should be FALSE
+#eval isPseudoLegalMove startState (mkMove .knight .white 0 1 1 3)
+
+-- White rook a1→a3 (blocked): should be FALSE
+#eval isPseudoLegalMove startState (mkMove .rook .white 0 0 2 0)
+
+-- White bishop c1→e3 (blocked): should be FALSE
+#eval isPseudoLegalMove startState (mkMove .bishop .white 0 2 2 4)
+
+-- White queen d1→d3 (blocked): should be FALSE
+#eval isPseudoLegalMove startState (mkMove .queen .white 0 3 2 3)
 
 -- ==========================================
--- TEST: Knight moves
+-- TEST: GameState.makeMove
 -- ==========================================
 
--- White knight b1->c3 (row 0, col 1 -> row 2, col 2): should be TRUE
-#eval isPseudoLegalMove startState (mkMove 0 1 2 2)
+-- Move 1: White plays e2→e4 (pawn double push)
+def move1 := mkMove .pawn .white 1 4 3 4
+def state1 := startState.makeMove move1
 
--- White knight b1->a3 (row 0, col 1 -> row 2, col 0): should be TRUE
-#eval isPseudoLegalMove startState (mkMove 0 1 2 0)
+#eval state1.isSome                                               -- true
+#eval do let s ← state1; return s.board.getSquare (mkPos 1 4)    -- none (e2 empty)
+#eval do let s ← state1; return s.board.getSquare (mkPos 3 4)    -- some (pawn, white)
+#eval do let s ← state1; return s.turn                            -- Colour.black
+#eval do let s ← state1; return s.enPassant                       -- some 4
 
--- White knight b1->d2 (row 0, col 1 -> row 1, col 3): should be FALSE (own pawn blocks target)
--- Wait - d2 has a white pawn. Let's check!
-#eval isPseudoLegalMove startState (mkMove 0 1 1 3)
+-- Move 2: Black plays d7→d5 (pawn double push)
+def move2 := mkMove .pawn .black 6 3 4 3
+def state2 := do let s ← state1; s.makeMove move2
 
--- ==========================================
--- TEST: Blocked pieces at start
--- ==========================================
+#eval state2.isSome                                               -- true
+#eval do let s ← state2; return s.board.getSquare (mkPos 6 3)    -- none (d7 empty)
+#eval do let s ← state2; return s.board.getSquare (mkPos 4 3)    -- some (pawn, black)
+#eval do let s ← state2; return s.turn                            -- Colour.white
+#eval do let s ← state2; return s.enPassant                       -- some 3
 
--- White rook a1->a3 (blocked by own pawn at a2): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 0 0 2 0)
+-- Move 3: White plays Nf3 (knight g1→f3)
+def move3 := mkMove .knight .white 0 6 2 5
+def state3 := do let s ← state2; s.makeMove move3
 
--- White bishop c1->e3 (blocked by own pawn at d2): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 0 2 2 4)
+#eval state3.isSome                                               -- true
+#eval do let s ← state3; return s.board.getSquare (mkPos 2 5)    -- some (knight, white)
+#eval do let s ← state3; return s.board.getSquare (mkPos 0 6)    -- none (g1 empty)
+#eval do let s ← state3; return s.enPassant                       -- none (en passant cleared)
 
--- White queen d1->d3 (blocked by own pawn at d2): should be FALSE
-#eval isPseudoLegalMove startState (mkMove 0 3 2 3)
+-- Illegal: White tries to move again (it's black's turn)
+def illegalMove := mkMove .pawn .white 1 3 2 3
+def stateIllegal := do let s ← state3; s.makeMove illegalMove
+#eval stateIllegal.isSome                                         -- false
 
-#eval startingBoard
 -- ==========================================
 -- Summary of expected results
 -- ==========================================
--- Board access:   some(white rook), some(black king), none
--- Pawn e2-e3:     true
--- Pawn e2-e4:     true
--- Pawn e2-e5:     false
--- Empty square:   false
--- Wrong colour:   false
--- Knight Nb1-c3:  true
--- Knight Nb1-a3:  true
--- Knight Nb1-d2:  false (blocked by own pawn)
--- Rook blocked:   false
--- Bishop blocked: false
--- Queen blocked:  false
+-- Board access:        some(white rook), some(black king), none
+-- Pawn e2-e3:          true
+-- Pawn e2-e4:          true
+-- Pawn e2-e5:          false
+-- Empty square move:   false
+-- Wrong colour:        false
+-- Knight Nb1-c3:       true
+-- Knight Nb1-a3:       true
+-- Knight Nb1-d2:       false
+-- Rook blocked:        false
+-- Bishop blocked:      false
+-- Queen blocked:       false
+-- makeMove e2-e4:      isSome=true, e2=none, e4=white pawn, turn=black, ep=some 4
+-- makeMove d7-d5:      isSome=true, d7=none, d5=black pawn, turn=white, ep=some 3
+-- makeMove Nf3:        isSome=true, f3=knight, g1=none, ep=none
+-- illegal double-move: isSome=false
