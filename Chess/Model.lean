@@ -310,3 +310,94 @@ def Board.canMove (board: Board) (colourPiecePos: ColourPiecePos) (destPos: Pos)
   }
   let move : Move := { colourPiecePos := colourPiecePos, toPos := destPos }
   isPseudoLegalMove state move
+
+-- ==========================================
+-- Applying a legal move to produce a new GameState
+-- ==========================================
+
+/-- Flip the turn colour. -/
+def Colour.opponent : Colour → Colour
+  | .white => .black
+  | .black => .white
+
+/-- Update castling rights based on which piece moved and from where.
+    If a king moves, both castling rights for that colour are revoked.
+    If a rook moves from its home corner, the corresponding right is revoked. -/
+def updateCastlingRights (castling : CastlingRights) (piece : Piece) (colour : Colour) (fromPos : Pos) : CastlingRights :=
+  match piece with
+  | .king =>
+    match colour with
+    | .white => { castling with whiteKingSide := false, whiteQueenSide := false }
+    | .black => { castling with blackKingSide := false, blackQueenSide := false }
+  | .rook =>
+    match colour with
+    | .white =>
+      if fromPos.row.val == 0 && fromPos.col.val == 7 then
+        { castling with whiteKingSide := false }
+      else if fromPos.row.val == 0 && fromPos.col.val == 0 then
+        { castling with whiteQueenSide := false }
+      else castling
+    | .black =>
+      if fromPos.row.val == 7 && fromPos.col.val == 7 then
+        { castling with blackKingSide := false }
+      else if fromPos.row.val == 7 && fromPos.col.val == 0 then
+        { castling with blackQueenSide := false }
+      else castling
+  | _ => castling
+
+/-- Determine the new en passant column, if any.
+    Set only when a pawn double-pushes from its home row. -/
+def computeEnPassant (piece : Piece) (fromPos toPos : Pos) : Option (Fin 8) :=
+  match piece with
+  | .pawn =>
+    let dr := (posDist toPos.row fromPos.row).natAbs
+    if dr == 2 then some toPos.col else none
+  | _ => none
+
+/-- Try to apply a move to the current game state.
+    Returns `some newState` if the move is pseudo-legal, `none` otherwise.
+    The new state has:
+      • the piece moved on the board
+      • the turn flipped
+      • castling rights updated
+      • en passant column updated
+      • en passant captures handled (enemy pawn removed) -/
+def GameState.makeMove (state : GameState) (move : Move) : Option GameState :=
+  if !isPseudoLegalMove state move then
+    none
+  else
+    let fromPos := move.colourPiecePos.pos
+    let toPos   := move.toPos
+    let piece   := move.colourPiecePos.colourPiece
+
+    -- 1. Move the piece on the board
+    let newBoard := state.board.forceMove move
+
+    -- 2. Handle en passant capture: remove the enemy pawn from beside us
+    let newBoard :=
+      match piece.piece with
+      | .pawn =>
+        let dc := (posDist toPos.col fromPos.col).natAbs
+        -- Diagonal move to an empty square = en passant
+        if dc == 1 && (state.board.getSquare toPos).isNone then
+          -- The captured pawn sits on the same column as toPos, same row as fromPos
+          newBoard.setSquare { row := fromPos.row, col := toPos.col } none
+        else newBoard
+      | _ => newBoard
+
+    -- 3. Update castling rights
+    let newCastling := updateCastlingRights state.castling piece.piece piece.colour fromPos
+
+    -- 4. Compute en passant column for the next move
+    let newEnPassant := computeEnPassant piece.piece fromPos toPos
+
+    -- 5. Flip the turn
+    some {
+      board     := newBoard
+      turn      := state.turn.opponent
+      castling  := newCastling
+      enPassant := newEnPassant
+    }
+
+
+    
