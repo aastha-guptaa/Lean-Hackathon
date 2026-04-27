@@ -39,7 +39,10 @@ def startState : GameState :=
   { board     := startingBoard
     turn      := Colour.white
     castling  := {}    -- all castling rights default to true
-    enPassant := none }
+    enPassant := none
+    valid := true
+    moveNum := 0
+    history := [] }
 
 #eval startState
 
