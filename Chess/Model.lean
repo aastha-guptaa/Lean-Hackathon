@@ -134,7 +134,7 @@ def isStraight (fromPos toPos : Pos) : Bool :=
 
 def isDiagonal (fromPos toPos : Pos) : Bool :=
   let (dr, dc) := getDists fromPos toPos
-  (dc == dr && dc != 0)
+  (dc.natAbs == dr.natAbs && dc != 0)
 
 def isStraightOrDiagonal (fromPos toPos : Pos) : Bool :=
   (isStraight fromPos toPos) || (isDiagonal fromPos toPos)
@@ -189,30 +189,27 @@ def isValidBishopMove (board : Board) (fromPos toPos : Pos) : Bool :=
 def isValidQueenMove (board : Board) (fromPos toPos : Pos) : Bool :=
   isValidRookMove board fromPos toPos || isValidBishopMove board fromPos toPos
 
-def isValidKingMove (fromPos toPos : Pos) : Bool :=
+def isValidKingMove (state : GameState) (fromPos toPos : Pos) : Bool :=
   let dc := posDist toPos.col fromPos.col
   let dr := posDist toPos.row fromPos.row
   -- Standard one-square move
-  dc.natAbs ≤ 1 && dr.natAbs ≤ 1 && (dc != 0 || dr != 0)
-
-
-/-
-else if dc.natAbs == 2 && dr == 0 then
-    let baseRow : Fin 8 := match state.turn with | Colour.white => ⟨0, by omega⟩ | Colour.black => ⟨7, by omega⟩
+  if dc.natAbs ≤ 1 && dr.natAbs ≤ 1 && (dc != 0 || dr != 0) then true
+  -- Castling: king moves exactly 2 squares horizontally
+  else if dc.natAbs == 2 && dr == 0 then
+    let baseRow : Fin 8 := match state.turn with | .white => ⟨0, by omega⟩ | .black => ⟨7, by omega⟩
     if fromPos.col.val == 4 && fromPos.row == baseRow then
       if dc == 2 then  -- kingside
         let allowed := match state.turn with
-          | Colour.white => state.castling.whiteKingSide
-          | Colour.black => state.castling.blackKingSide
+          | .white => state.castling.whiteKingSide
+          | .black => state.castling.blackKingSide
         allowed && isPathClear state.board fromPos { col := ⟨7, by omega⟩, row := baseRow }
       else  -- dc == -2, queenside
         let allowed := match state.turn with
-          | Colour.white => state.castling.whiteQueenSide
-          | Colour.black => state.castling.blackQueenSide
+          | .white => state.castling.whiteQueenSide
+          | .black => state.castling.blackQueenSide
         allowed && isPathClear state.board fromPos { col := ⟨0, by omega⟩, row := baseRow }
     else false
   else false
--/
 
 def validPawnMoveHelper (move : Int × Int) (isUp : Bool) : Bool :=
   let dir := if isUp then
@@ -299,7 +296,7 @@ def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
       | Piece.rook   => isValidRookMove state.board move.colourPiecePos.pos move.toPos
       | Piece.bishop => isValidBishopMove state.board move.colourPiecePos.pos move.toPos
       | Piece.queen  => isValidQueenMove state.board move.colourPiecePos.pos move.toPos
-      | Piece.king   => isValidKingMove move.colourPiecePos.pos move.toPos
+      | Piece.king   => isValidKingMove state move.colourPiecePos.pos move.toPos
 
 /-- Checks if a piece can move from one position to another.
     Uses pseudo-legal validation (correct piece movement, path clear, not capturing own piece).
@@ -380,14 +377,31 @@ def GameState.makeMove (state : GameState) (move : Move) : GameState :=
     -- 1. Move the piece on the board
     let newBoard := state.board.forceMove move
 
-    -- 2. Handle en passant capture: remove the enemy pawn from beside us
+    -- 2. Handle castling: move the rook alongside the king
+    let newBoard :=
+      match piece.piece with
+      | .king =>
+        let dc := posDist toPos.col fromPos.col
+        let baseRow := fromPos.row
+        if dc == 2 then  -- kingside: rook h→f
+          let rookFrom : Pos := { row := baseRow, col := ⟨7, by omega⟩ }
+          let rookTo   : Pos := { row := baseRow, col := ⟨5, by omega⟩ }
+          let rook := newBoard.getSquare rookFrom
+          (newBoard.setSquare rookFrom none).setSquare rookTo rook
+        else if dc == -2 then  -- queenside: rook a→d
+          let rookFrom : Pos := { row := baseRow, col := ⟨0, by omega⟩ }
+          let rookTo   : Pos := { row := baseRow, col := ⟨3, by omega⟩ }
+          let rook := newBoard.getSquare rookFrom
+          (newBoard.setSquare rookFrom none).setSquare rookTo rook
+        else newBoard
+      | _ => newBoard
+
+    -- 3. Handle en passant capture: remove the enemy pawn from beside us
     let newBoard :=
       match piece.piece with
       | .pawn =>
         let dc := (posDist toPos.col fromPos.col).natAbs
-        -- Diagonal move to an empty square = en passant
         if dc == 1 && (state.board.getSquare toPos).isNone then
-          -- The captured pawn sits on the same column as toPos, same row as fromPos
           newBoard.setSquare { row := fromPos.row, col := toPos.col } none
         else newBoard
       | _ => newBoard
