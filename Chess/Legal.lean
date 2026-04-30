@@ -80,7 +80,7 @@ def findKing (board : Board) (colour : Colour) : Option Pos :=
 /-- Is the given colour currently in check in `state`? -/
 def isInCheck (state : GameState) (colour : Colour) : Bool :=
   match findKing state.board colour with
-  | none      => true
+  | none      => false
   | some kPos => isSquareAttacked state.board colour.opponent kPos
 
 /-- True iff this move is a castling king move (2 files horizontally). -/
