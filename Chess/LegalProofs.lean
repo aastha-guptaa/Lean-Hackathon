@@ -92,13 +92,6 @@ theorem makeMove_enPassant_of_not_pseudoLegal
 -- attack/check interfaces
 -- ------------------------------------------
 
-theorem isInCheck_ifNoKing
-  (s : GameState) (c : Colour)
-  (h : findKing s.board c = none) :
-  isInCheck s c = true := by
-  unfold isInCheck
-  simp [h]
-
 theorem isInCheck_eq_attackedKingSquare
   (s : GameState) (c : Colour) (k : Pos)
   (h : findKing s.board c = some k) :
