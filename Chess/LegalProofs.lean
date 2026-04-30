@@ -108,7 +108,26 @@ theorem castlePathSafe_implies_hasRook
   (hCastle : isCastlingMove m = true)
   (hSafe : castlePathSafe s m = true) :
   hasCastlingRook s m = true := by
-  sorry
+  let midExpr :=
+    intToFin8 ((m.colourPiecePos.pos.col.val : Int) +
+      (if 0 < posDist m.toPos.col m.colourPiecePos.pos.col then 1 else -1))
+  cases hMid : midExpr with
+  | none =>
+      simp [midExpr, castlePathSafe, hCastle, hMid] at hSafe
+  | some midCol =>
+      have hSafe' :
+          (hasCastlingRook s m &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+                { row := m.colourPiecePos.pos.row, col := midCol }) = true := by
+        simpa [midExpr, castlePathSafe, hCastle, hMid] using hSafe
+      have hDecomp :
+          hasCastlingRook s m = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+            { row := m.colourPiecePos.pos.row, col := midCol } = true := by
+        simpa [Bool.and_eq_true, and_assoc] using hSafe'
+      exact hDecomp.1
 
 theorem castlePathSafe_implies_startSafe
   (s : GameState) (m : Move)
@@ -117,7 +136,30 @@ theorem castlePathSafe_implies_startSafe
   let fromPos := m.colourPiecePos.pos
   let mover := m.colourPiecePos.colourPiece.colour
   isSquareAttacked s.board mover.opponent fromPos = false := by
-  sorry
+  dsimp
+  let midExpr :=
+    intToFin8 ((m.colourPiecePos.pos.col.val : Int) +
+      (if 0 < posDist m.toPos.col m.colourPiecePos.pos.col then 1 else -1))
+  cases hMid : midExpr with
+  | none =>
+      simp [midExpr, castlePathSafe, hCastle, hMid] at hSafe
+  | some midCol =>
+      have hSafe' :
+          (hasCastlingRook s m &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+                { row := m.colourPiecePos.pos.row, col := midCol }) = true := by
+        simpa [midExpr, castlePathSafe, hCastle, hMid] using hSafe
+      have hDecomp :
+          hasCastlingRook s m = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+            { row := m.colourPiecePos.pos.row, col := midCol } = true := by
+        simpa [Bool.and_eq_true, and_assoc] using hSafe'
+      have hStart :
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos = true :=
+        hDecomp.2.1
+      simpa using hStart
 
 theorem castlePathSafe_implies_midSafe
   (s : GameState) (m : Move)
@@ -133,7 +175,30 @@ theorem castlePathSafe_implies_midSafe
   | some midCol =>
       isSquareAttacked s.board mover.opponent { row := fromPos.row, col := midCol } = false
   | none => False := by
-  sorry
+  dsimp
+  let midExpr :=
+    intToFin8 ((m.colourPiecePos.pos.col.val : Int) +
+      (if 0 < posDist m.toPos.col m.colourPiecePos.pos.col then 1 else -1))
+  cases hMid : midExpr with
+  | none =>
+      simp [midExpr, castlePathSafe, hCastle, hMid] at hSafe
+  | some midCol =>
+      have hSafe' :
+          (hasCastlingRook s m &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos &&
+              !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+                { row := m.colourPiecePos.pos.row, col := midCol }) = true := by
+        simpa [midExpr, castlePathSafe, hCastle, hMid] using hSafe
+      have hDecomp :
+          hasCastlingRook s m = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent m.colourPiecePos.pos = true ∧
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+            { row := m.colourPiecePos.pos.row, col := midCol } = true := by
+        simpa [Bool.and_eq_true, and_assoc] using hSafe'
+      have hMidSafe :
+          !isSquareAttacked s.board m.colourPiecePos.colourPiece.colour.opponent
+            { row := m.colourPiecePos.pos.row, col := midCol } = true := hDecomp.2.2
+      simpa [midExpr, hMid] using hMidSafe
 
 -- ------------------------------------------
 -- legal move core
@@ -145,7 +210,7 @@ theorem legal_implies_pseudoLegal
   isPseudoLegalMove s m = true := by
   unfold isLegalMove at h
   by_cases hp : isPseudoLegalMove s m
-  · simpa [hp] using hp
+  · simp only [hp]
   · simp [hp] at h
 
 theorem legal_implies_kingSafeAfter
