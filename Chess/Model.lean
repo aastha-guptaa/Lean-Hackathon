@@ -73,13 +73,17 @@ def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
 structure Move where
   colourPiecePos : ColourPiecePos
   toPos : Pos
+  promotion : Option Piece := none
 
 /-- Applies a move by moving whatever is at `fromPos` to `toPos`, leaving `fromPos` empty.
     Note: This does not validate if the move is legal according to chess rules. -/
 def Board.forceMove (board : Board) (move : Move) : Board :=
   let piece := move.colourPiecePos.colourPiece
+  let promotedPiece := match move.promotion with
+    | some p => { piece with piece := p }
+    | none => piece
   let boardWithoutPiece := board.setSquare move.colourPiecePos.pos none
-  boardWithoutPiece.setSquare move.toPos piece
+  boardWithoutPiece.setSquare move.toPos (some promotedPiece)
 
 -- ==========================================
 -- Game State (needed for castling & en passant)
@@ -243,11 +247,23 @@ def isSquareEmpty (board : Board) (pos : Pos) : Bool :=
     • 1 square diagonally forward to capture an enemy piece
     • 1 square diagonally forward for en passant (target square empty, but enemy
       pawn is beside us and just double-stepped) -/
-def isValidPawnMove (state : GameState) (fromPos toPos : Pos) : Bool :=
+def isValidPawnMove (state : GameState) (move : Move) : Bool :=
+  let fromPos := move.colourPiecePos.pos
+  let toPos := move.toPos
   let dc := posDist toPos.col fromPos.col   -- column delta
   let dr := posDist toPos.row fromPos.row   -- row delta
   let forward : Int := match state.turn with | .white => 1  | .black => -1
   let homeRow : Nat  := match state.turn with | .white => 1  | .black => 6
+  let promoRow : Nat := match state.turn with | .white => 7  | .black => 0
+
+  let validPromo := if toPos.row.val == promoRow then
+    match move.promotion with
+    | some p => p == .queen || p == .rook || p == .bishop || p == .knight
+    | none => false
+  else
+    move.promotion.isNone
+
+  if !validPromo then false else
   match dc, dr with
   -- Single push: same column, one step forward, target must be empty
   | 0, d => if d == forward then
@@ -291,7 +307,7 @@ def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
     else if !(isValidTarget state.board state.turn move.toPos) then false
     -- Piece-specific rule
     else match cp.piece with
-      | Piece.pawn   => isValidPawnMove state move.colourPiecePos.pos move.toPos
+      | Piece.pawn   => isValidPawnMove state move
       | Piece.knight => isValidKnightMove move.colourPiecePos.pos move.toPos
       | Piece.rook   => isValidRookMove state.board move.colourPiecePos.pos move.toPos
       | Piece.bishop => isValidBishopMove state.board move.colourPiecePos.pos move.toPos

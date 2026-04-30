@@ -1,5 +1,6 @@
 import Chess.Model
 import Chess.Display
+import Chess.Model
 
 -- ==========================================
 -- Helpers
@@ -35,11 +36,13 @@ def mkPos (r c : Nat) (hr : r < 8 := by omega) (hc : c < 8 := by omega) : Pos :=
 
 def mkMove (piece : Piece) (colour : Colour) (r1 c1 r2 c2 : Nat)
     (hr1 : r1 < 8 := by omega) (hc1 : c1 < 8 := by omega)
-    (hr2 : r2 < 8 := by omega) (hc2 : c2 < 8 := by omega) : Move :=
+    (hr2 : r2 < 8 := by omega) (hc2 : c2 < 8 := by omega)
+    (promotion : Option Piece := none) : Move :=
   { colourPiecePos := {
       colourPiece := { piece := piece, colour := colour }
       pos := mkPos r1 c1 }
-    toPos := mkPos r2 c2 }
+    toPos := mkPos r2 c2
+    promotion := promotion }
 
 deriving instance Repr for Piece
 deriving instance Repr for Colour
@@ -280,7 +283,7 @@ def finalState := playMoves startState gameOfTheCenturyMoves
 #eval finalState.board.getSquare (mkPos 2 1) -- Black Bishop on b3 covering c2 and d1!
 #eval finalState.board.getSquare (mkPos 4 2) -- Black Bishop on c5 covering d4 (and cutting off escape)
 
-#eval finalState.board 
+#eval finalState.board
 
 -- ==========================================
 -- TEST: Verify Castling (Move 4 for Black)
@@ -357,3 +360,52 @@ def kf1Move := mkMove .king .white 0 4 0 5
 -- Can White pawn legally move a2-a3 while in check? (Should be false!)
 def illegalPawnMove := mkMove .pawn .white 1 0 2 0
 #eval isLegalMove stateAtCheck illegalPawnMove
+
+-- ==========================================
+-- TEST: Pawn Underpromotion
+-- ==========================================
+-- We will setup a custom game where a pawn promotes.
+-- 1. e4 d5
+-- 2. exd5 Nf6
+-- 3. d6 Nd5
+-- 4. d7+ Kxd7 (wait, no. Let's make it simpler)
+-- 1. h4 a5 2. h5 a4 3. h6 a3 4. hxg7 axb2 5. gxh8=N
+def underPromoMoves : List Move := [
+  mkMove .pawn .white 1 7 3 7, -- 1. h4
+  mkMove .pawn .black 6 0 4 0, -- 1... a5
+  mkMove .pawn .white 3 7 4 7, -- 2. h5
+  mkMove .pawn .black 4 0 3 0, -- 2... a4
+  mkMove .pawn .white 4 7 5 7, -- 3. h6
+  mkMove .pawn .black 3 0 2 0, -- 3... a3
+  mkMove .pawn .white 5 7 6 6, -- 4. hxg7 (captures g7 pawn)
+  mkMove .pawn .black 2 0 1 1, -- 4... axb2 (captures b2 pawn)
+  -- 5. gxh8=N (White Pawn underpromotes to White Knight!)
+  mkMove .pawn .white 6 6 7 7 (by omega) (by omega) (by omega) (by omega) (some .knight),
+  -- 5... bxa1=Q (Black Pawn captures White Rook and promotes to Black Queen!)
+  mkMove .pawn .black 1 1 0 0 (by omega) (by omega) (by omega) (by omega) (some .queen)
+]
+
+def promoState1 := playMoves startState (underPromoMoves.take 2)
+def promoState2 := playMoves startState (underPromoMoves.take 4)
+def promoState3 := playMoves startState (underPromoMoves.take 6)
+def promoState4 := playMoves startState (underPromoMoves.take 8)
+def promoState5 := playMoves startState (underPromoMoves.take 9)
+def promoState6 := playMoves startState underPromoMoves
+
+-- Board after 1. h4 a5
+#eval promoState1.board
+
+-- Board after 2. h5 a4
+#eval promoState2.board
+
+-- Board after 3. h6 a3
+#eval promoState3.board
+
+-- Board after 4. hxg7 axb2 (Pawns capturing!)
+#eval promoState4.board
+
+-- Board after 5. gxh8=N (White Underpromotes to Knight!)
+#eval promoState5.board
+
+-- Board after 5... bxa1=Q (Black Promotes to Queen!)
+#eval promoState6.board
