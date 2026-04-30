@@ -340,3 +340,20 @@ def epState5 := epState4.makeMove epMove5
 
 -- Board after 3. exd6 e.p. (White pawn captures diagonally, Black pawn vanishes)
 #eval epState5.board
+
+-- ==========================================
+-- TEST: Check and Legality logic (isInCheck, isLegalMove)
+-- ==========================================
+-- Let's take the Game of the Century up to move 32 (16... Rfe8+)
+def stateAtCheck := playMoves startState (gameOfTheCenturyMoves.take 32)
+
+-- White should be in check from the Black Rook on e8!
+#eval isInCheck stateAtCheck Colour.white
+
+-- Can White King legally move to f1? (Kf1 is move 17 in the game)
+def kf1Move := mkMove .king .white 0 4 0 5
+#eval isLegalMove stateAtCheck kf1Move
+
+-- Can White pawn legally move a2-a3 while in check? (Should be false!)
+def illegalPawnMove := mkMove .pawn .white 1 0 2 0
+#eval isLegalMove stateAtCheck illegalPawnMove
