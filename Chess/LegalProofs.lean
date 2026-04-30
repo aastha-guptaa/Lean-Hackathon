@@ -217,14 +217,37 @@ theorem legal_implies_kingSafeAfter
   (s : GameState) (m : Move)
   (h : isLegalMove s m = true) :
   isInCheck (s.makeMove m) s.turn = false := by
-  sorry
+  unfold isLegalMove at h
+  by_cases hp : isPseudoLegalMove s m
+  · have hAnd : (!isInCheck (s.makeMove m) s.turn &&
+      (if isCastlingMove m then castlePathSafe s m else true)) = true := by
+      simpa [hp] using h
+    have hDecomp :
+        !isInCheck (s.makeMove m) s.turn = true ∧
+        (if isCastlingMove m then castlePathSafe s m else true) = true := by
+      simpa [Bool.and_eq_true] using hAnd
+    have hLeft : !isInCheck (s.makeMove m) s.turn = true := by
+      exact hDecomp.1
+    simpa using hLeft
+  · simp [hp] at h
 
 theorem legal_castling_implies_castlePathSafe
   (s : GameState) (m : Move)
   (hLegal : isLegalMove s m = true)
   (hCastle : isCastlingMove m = true) :
   castlePathSafe s m = true := by
-  sorry
+  unfold isLegalMove at hLegal
+  have hp : isPseudoLegalMove s m = true := legal_implies_pseudoLegal s m hLegal
+  have hAnd : (!isInCheck (s.makeMove m) s.turn &&
+      (if isCastlingMove m then castlePathSafe s m else true)) = true := by
+    simpa [hp] using hLegal
+  have hDecomp :
+      !isInCheck (s.makeMove m) s.turn = true ∧
+      (if isCastlingMove m then castlePathSafe s m else true) = true := by
+    simpa [Bool.and_eq_true] using hAnd
+  have hRight : (if isCastlingMove m then castlePathSafe s m else true) = true := by
+    exact hDecomp.2
+  simpa [hCastle] using hRight
 
 -- ------------------------------------------
 -- castling history specialization
