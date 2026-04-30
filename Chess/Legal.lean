@@ -141,4 +141,35 @@ def isLegalMove (state : GameState) (move : Move) : Bool :=
     let castleExtra := if isCastlingMove move then castlePathSafe state move else true
     kingSafeAfter && castleExtra
 
+/-- All board positions on an 8x8 board. -/
+def allPos : List Pos :=
+  (List.range 64).filterMap (fun i => mkPos? (i / 8) (i % 8))
+
+/-- Build a move from a board square (if occupied) to a destination. -/
+def mkMoveFromBoard? (state : GameState) (fromPos toPos : Pos) : Option Move :=
+  match state.board.getSquare fromPos with
+  | none => none
+  | some cp =>
+      some {
+        colourPiecePos := { colourPiece := cp, pos := fromPos }
+        toPos := toPos
+      }
+
+/-- Does `colour` have at least one legal move from this position? -/
+def hasAnyLegalMove (state : GameState) (colour : Colour) : Bool :=
+  let s' : GameState := { state with turn := colour }
+  allPos.any (fun fromPos =>
+    allPos.any (fun toPos =>
+      match mkMoveFromBoard? s' fromPos toPos with
+      | none => false
+      | some m => isLegalMove s' m))
+
+/-- Checkmate: side to test is in check and has no legal move. -/
+def isCheckmate (state : GameState) (colour : Colour) : Bool :=
+  isInCheck state colour && !hasAnyLegalMove state colour
+
+/-- Game-over characterization (currently: either side is checkmated). -/
+def isGameOver (state : GameState) : Bool :=
+  isCheckmate state .white || isCheckmate state .black
+
 end Chess

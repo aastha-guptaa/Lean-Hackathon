@@ -250,6 +250,45 @@ theorem legal_castling_implies_castlePathSafe
   simpa [hCastle] using hRight
 
 -- ------------------------------------------
+-- checkmate / game-over
+-- ------------------------------------------
+
+theorem isCheckmate_implies_isInCheck
+  (s : GameState) (c : Colour)
+  (h : isCheckmate s c = true) :
+  isInCheck s c = true := by
+  unfold isCheckmate at h
+  have hDecomp : isInCheck s c = true ∧ !hasAnyLegalMove s c = true := by
+    simpa [Bool.and_eq_true] using h
+  exact hDecomp.1
+
+theorem isCheckmate_implies_noLegalMoves
+  (s : GameState) (c : Colour)
+  (h : isCheckmate s c = true) :
+  hasAnyLegalMove s c = false := by
+  unfold isCheckmate at h
+  have hDecomp : isInCheck s c = true ∧ !hasAnyLegalMove s c = true := by
+    simpa [Bool.and_eq_true] using h
+  have hNoMoves : !hasAnyLegalMove s c = true := hDecomp.2
+  simpa using hNoMoves
+
+theorem isCheckmate_def
+  (s : GameState) (c : Colour) :
+  isCheckmate s c = (isInCheck s c && !hasAnyLegalMove s c) := by
+  rfl
+
+theorem isGameOver_ifEitherCheckmate
+  (s : GameState)
+  (h : isCheckmate s .white = true ∨ isCheckmate s .black = true) :
+  isGameOver s = true := by
+  unfold isGameOver
+  cases h with
+  | inl hw =>
+      simp [hw]
+  | inr hb =>
+      simp [hb]
+
+-- ------------------------------------------
 -- castling history specialization
 -- ------------------------------------------
 
