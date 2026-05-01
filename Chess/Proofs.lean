@@ -26,7 +26,7 @@ def emptyState : GameState := {
   history := []
 }
 
-theorem empty_board_no_moves (move : Move) : 
+theorem empty_board_no_moves (move : Move) :
   isPseudoLegalMove emptyState move = false := by
   -- We unfold the definitions to show the board is completely empty
   unfold isPseudoLegalMove
@@ -45,10 +45,10 @@ theorem no_friendly_fire (state : GameState) (move : Move) :
 -- This is hard to state with lists without defining list of all squares.
 
 -- 4. A pawn never moves backwards
-theorem pawn_always_moves_forward (state : GameState) (fromPos toPos : Pos) :
+theorem pawn_always_moves_forward (state : GameState) (move : Move) :
   state.turn = white →
-  isValidPawnMove state fromPos toPos = true →
-  toPos.row.val > fromPos.row.val := by
+  isValidPawnMove state move = true →
+  move.toPos.row.val > move.colourPiecePos.pos.row.val := by
   sorry
 
 -- 5. A bishop always stays on the same colour square
@@ -56,3 +56,14 @@ theorem bishop_stays_on_colour (board : Board) (fromPos toPos : Pos) :
   isValidBishopMove board fromPos toPos = true →
   (fromPos.row.val + fromPos.col.val) % 2 = (toPos.row.val + toPos.col.val) % 2 := by
   sorry
+
+-- 6. Pawn Promotion Validation
+theorem pawn_promotion_always_on_promo_row (state : GameState) (move : Move) :
+  isValidPawnMove state move = true →
+  move.promotion.isSome = true →
+  (state.turn = white → move.toPos.row.val = 7) ∧
+  (state.turn = black → move.toPos.row.val = 0) := by
+  -- By definition in `isValidPawnMove`, `validPromo` is only true if `toPos.row.val == promoRow`
+  -- when `move.promotion` is `some`.
+  sorry
+
