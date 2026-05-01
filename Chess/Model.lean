@@ -608,7 +608,13 @@ def isCheckmate (state : GameState) (colour : Colour) : Bool :=
     - castling transit/start constraints
     - fails if the game is already in checkmate (game over) -/
 def isLegalMove (state : GameState) (move : Move) : Bool :=
-  if isCheckmate state state.turn then
+  if isCheckmate state .white || isCheckmate state .black then
     false
   else
     isLegalMoveInternal state move
+
+def GameState.makeValidMove (state : GameState) (move : Move) : GameState :=
+  if !(isLegalMove state move) then
+    { state with valid := false }
+  else
+    state.makeMove move
