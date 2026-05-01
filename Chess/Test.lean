@@ -100,7 +100,7 @@ def stateIllegal := state5.makeMove (mkMove .pawn .white 1 3 2 3)
 
 /-- Chain multiple moves, returning the final GameState -/
 def playMoves (state : GameState) (moves : List Move) : GameState :=
-  moves.foldl (fun s m => s.makeMove m) state
+  moves.foldl (fun s m => s.makeValidMove m) state
 
 def gameOfTheCenturyMoves : List Move := [
   -- Nf3
@@ -266,7 +266,8 @@ def gameOfTheCenturyMoves : List Move := [
   -- Kc1
   mkMove .king .white 0 1 0 2,
   -- Rc2#
-  mkMove .rook .black 1 0 1 2
+  mkMove .rook .black 1 0 1 2,
+  mkMove .queen .white 7 1 7 2
 ]
 
 def finalState := playMoves startState gameOfTheCenturyMoves
@@ -284,6 +285,13 @@ def finalState := playMoves startState gameOfTheCenturyMoves
 #eval finalState.board.getSquare (mkPos 4 2) -- Black Bishop on c5 covering d4 (and cutting off escape)
 
 #eval finalState.board
+
+def checkmatestate := playMoves startState (gameOfTheCenturyMoves.take 79)
+
+#eval checkmatestate.valid
+#eval checkmatestate
+#eval checkmatestate.isAnyCheckmate
+
 
 -- ==========================================
 -- TEST: Verify Castling (Move 4 for Black)
@@ -355,11 +363,11 @@ def stateAtCheck := playMoves startState (gameOfTheCenturyMoves.take 32)
 
 -- Can White King legally move to f1? (Kf1 is move 17 in the game)
 def kf1Move := mkMove .king .white 0 4 0 5
-#eval isLegalMove stateAtCheck kf1Move
+#eval stateAtCheck.isLegalMove kf1Move
 
 -- Can White pawn legally move a2-a3 while in check? (Should be false!)
 def illegalPawnMove := mkMove .pawn .white 1 0 2 0
-#eval isLegalMove stateAtCheck illegalPawnMove
+#eval stateAtCheck.isLegalMove illegalPawnMove
 
 -- ==========================================
 -- TEST: Pawn Underpromotion
