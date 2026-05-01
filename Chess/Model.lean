@@ -1,9 +1,3 @@
--- Board is a vector of a vector (fixed length : )
-
-#check Vector
-
---  inductive types
-
 /-- The pieces on a chessboard. -/
 inductive Piece where
   | pawn
@@ -590,7 +584,7 @@ def mkMoveFromBoard? (state : GameState) (fromPos toPos : Pos) : Option Move :=
       }
 
 /-- Does `colour` have at least one legal move from this position? -/
-def hasAnyLegalMove (state : GameState) (colour : Colour) : Bool :=
+def GameState.hasAnyLegalMove (state : GameState) (colour : Colour) : Bool :=
   let s' : GameState := { state with turn := colour }
   allPos.any (fun fromPos =>
     allPos.any (fun toPos =>
@@ -599,22 +593,56 @@ def hasAnyLegalMove (state : GameState) (colour : Colour) : Bool :=
       | some m => isLegalMoveInternal s' m))
 
 /-- Checkmate: side to test is in check and has no legal move. -/
-def isCheckmate (state : GameState) (colour : Colour) : Bool :=
-  isInCheck state colour && !hasAnyLegalMove state colour
+def GameState.isCheckmate (state : GameState) (colour : Colour) : Bool :=
+  isInCheck state colour && !state.hasAnyLegalMove colour
+
+def GameState.isAnyCheckmate (state : GameState) : Bool :=
+  state.isCheckmate .white || state.isCheckmate .black
 
 /-- Final isLegalMove:
     - pseudo-legal geometry/rules
     - own king safe after move
     - castling transit/start constraints
     - fails if the game is already in checkmate (game over) -/
-def isLegalMove (state : GameState) (move : Move) : Bool :=
-  if isCheckmate state .white || isCheckmate state .black then
+def GameState.isLegalMove (state : GameState) (move : Move) : Bool :=
+  if state.isAnyCheckmate then
     false
   else
     isLegalMoveInternal state move
 
 def GameState.makeValidMove (state : GameState) (move : Move) : GameState :=
-  if !(isLegalMove state move) then
+  if !(state.isLegalMove move) then
     { state with valid := false }
   else
     state.makeMove move
+
+/-- Chain multiple moves, returning the final GameState -/
+def GameState.playMoves (state : GameState) (moves : List Move) : GameState :=
+  moves.foldl (fun s m => s.makeValidMove m) state
+
+def GameState.isValidMoves (state : GameState) (moves : List Move) : Bool :=
+  match moves with
+  | [] => state.valid
+  | m :: ms =>
+    -- If the current state is already invalid, the whole sequence is invalid.
+    if !state.valid then
+      false
+    else
+      let nextState := state.makeValidMove m
+      if nextState.valid then
+        nextState.isValidMoves ms
+      else
+        false
+
+/--
+  Takes an initial GameState and a list of moves, returning a list of
+  all GameStates produced after each move is applied in order.
+-/
+def GameState.getStatesSequence (state : GameState) (moves : List Move) : List GameState :=
+  match moves with
+  -- Base case: No more moves to apply, return an empty list of results.
+  | [] => []
+  -- Recursive case: Apply the first move, then recurse with the remaining moves.
+  | m :: ms =>
+    let nextState := state.makeValidMove m
+    nextState :: nextState.getStatesSequence ms
