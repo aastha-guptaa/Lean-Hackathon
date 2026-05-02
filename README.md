@@ -21,17 +21,16 @@ From the repo root:
 python3 -m venv .venv
 source .venv/bin/activate
 pip3 install pydantic openai
+pip3 install python-dotenv
 ```
 
-Set API keys:
+Set API key in a `.env` file at repo root:
 
 ```bash
-# OpenAI
-export LLM_BACKEND=openai
-export OPENAI_API_KEY="sk-..."
+echo 'OPENAI_API_KEY="sk-..."' > .env
 ```
 
-Optional (persist env vars across shell sessions):
+Alternative: export directly in shell:
 
 ```bash
 echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc
