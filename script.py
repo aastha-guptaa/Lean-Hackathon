@@ -4,6 +4,8 @@ from typing import List, Literal
 from pydantic import BaseModel, Field
 from openai import OpenAI
 
+openai_model = "gpt-5"
+
 class ChessMove(BaseModel):
     """Represents a single chess move with piece, color, and positions."""
     piece: Literal["king", "queen", "rook", "bishop", "knight", "pawn"]
@@ -18,7 +20,6 @@ class CheckmateSolution(BaseModel):
 def solve_chess_puzzle(fen: str):
     client = OpenAI()
 
-    # Detailed instructions for the LLM regarding piece types and castling
     instructions = (
         f"Analyze this chess board position given in FEN notation: {fen}\n"
         "Provide the sequence of forced moves for a checkmate. "
@@ -34,7 +35,7 @@ def solve_chess_puzzle(fen: str):
 
     try:
         completion = client.beta.chat.completions.parse(
-            model="gpt-5", # Using the current standard for Structured Outputs
+            model=openai_model,
             messages=[
                 {
                     "role": "system", 
