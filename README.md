@@ -58,6 +58,29 @@ lake exe chess "1rb5/4r3/3p1npb/3kp1P1/1P3P1P/5nR1/2Q1BK2/bN4NR w - - 3 61"
 python3 script.py "<FEN>"
 ```
 
+## Alternative: Run Without API Access
+If current API keys are unavailable or quota-limited, use the following local mock setup to understand how the verification pipeline works end-to-end.
+
+1. Create a local `python3` mock executable:
+```bash
+mkdir -p .mockbin
+echo '#!/usr/bin/env bash' > .mockbin/python3
+echo 'printf "%s\n" "{\"moves\":[{\"piece\":\"rook\",\"color\":\"white\",\"initial_position\":\"g3\",\"final_position\":\"g4\"}]}"' >> .mockbin/python3
+chmod +x .mockbin/python3
+```
+
+2. Verify the mock output is valid JSON:
+```bash
+.mockbin/python3
+```
+
+3. Run the Lean executable with the mock in `PATH`:
+```bash
+PATH="$(pwd)/.mockbin:$PATH" lake exe chess "1rb5/4r3/3p1npb/3kp1P1/1P3P1P/5nR1/2Q1BK2/bN4NR w - - 3 61"
+```
+
+This mode does not call any LLM. It is intended only to demonstrate parsing, move validation, and final-state checking.
+
 ## Suggested Puzzles
 You can find several Mate-in-N puzzles in FEN notation to test here:
 *   [Mate in 2 Puzzles](https://wtharvey.com/m8n2.txt)
