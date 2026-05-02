@@ -56,7 +56,7 @@ def solve_chess_puzzle(fen: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python script.py '<FEN_STRING>'")
+        print("Usage: python3 script.py '<FEN_STRING>'")
         sys.exit(1)
 
     solve_chess_puzzle(sys.argv[1])

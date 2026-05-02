@@ -20,7 +20,7 @@ From the repo root:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install pydantic openai
+pip3 install pydantic openai
 ```
 
 Set API keys:
@@ -55,7 +55,7 @@ lake exe chess "1rb5/4r3/3p1npb/3kp1P1/1P3P1P/5nR1/2Q1BK2/bN4NR w - - 3 61"
 
 3. (Optional) Debug the Python solver directly to see raw backend errors:
 ```bash
-python script.py "<FEN>"
+python3 script.py "<FEN>"
 ```
 
 ## Suggested Puzzles

@@ -5,7 +5,7 @@ def main (args : List String) : IO Unit := do
   | [] => return ()
   | fen :: _ =>
     let state := fenToGameState fen
-    let res ← IO.Process.run { cmd := "python", args := #["script.py", fen] }
+    let res ← IO.Process.run { cmd := "python3", args := #["script.py", fen] }
     IO.println s!"Output from LLM: {res}"
     IO.println "================================="
     match parsePythonOutputToMoves res with
