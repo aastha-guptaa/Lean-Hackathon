@@ -62,4 +62,4 @@ instance : Repr <| List GameState where
 
 instance : ToString <| List GameState where
   toString lgs :=
-    lgs.foldl (fun s gs => s ++ "\n" ++ toString gs) ""
+    lgs.foldl (fun s gs => s ++ toString gs ++ "\n") ""
