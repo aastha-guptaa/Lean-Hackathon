@@ -15,9 +15,28 @@ The goal of this project is to create a formally verified bridge between Large L
 2. The final state is a mathematically sound checkmate.
 
 ## Setup
-Create a Python venv with the `pydantic` and `openai` modules installed.
-Ensure that your OpenAI API Key is stored in the `OPENAI_API_KEY` environment variable.
-Activate the Python venv, and navigate to the root of the repo.
+From the repo root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install pydantic openai
+```
+
+Set API keys:
+
+```bash
+# OpenAI
+export LLM_BACKEND=openai
+export OPENAI_API_KEY="sk-..."
+```
+
+Optional (persist env vars across shell sessions):
+
+```bash
+echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc
+source ~/.zshrc
+```
 
 ## Running the Tool
 1. Build the Lean project:
@@ -32,6 +51,11 @@ lake exe chess "<FEN>"
 Example:
 ```bash
 lake exe chess "1rb5/4r3/3p1npb/3kp1P1/1P3P1P/5nR1/2Q1BK2/bN4NR w - - 3 61"
+```
+
+3. (Optional) Debug the Python solver directly to see raw backend errors:
+```bash
+python script.py "<FEN>"
 ```
 
 ## Suggested Puzzles
