@@ -3,10 +3,6 @@ import Chess.Legal
 
 namespace Chess
 
--- ------------------------------------------
--- makeMove: valid branch
--- ------------------------------------------
-
 theorem makeMove_history_of_pseudoLegal
   (s : GameState) (m : Move)
   (h : isPseudoLegalMove s m = true) :
@@ -34,10 +30,6 @@ theorem makeMove_validFlag_of_pseudoLegal
   (s.makeMove m).valid = true := by
   unfold GameState.makeMove
   simp [h]
-
--- ------------------------------------------
--- makeMove: invalid branch (non-destructive except valid flag)
--- ------------------------------------------
 
 theorem makeMove_validFlag_of_not_pseudoLegal
   (s : GameState) (m : Move)
@@ -88,20 +80,12 @@ theorem makeMove_enPassant_of_not_pseudoLegal
   unfold GameState.makeMove
   simp [h]
 
--- ------------------------------------------
--- attack/check interfaces
--- ------------------------------------------
-
 theorem isInCheck_eq_attackedKingSquare
   (s : GameState) (c : Colour) (k : Pos)
   (h : findKing s.board c = some k) :
   isInCheck s c = isSquareAttacked s.board c.opponent k := by
   unfold isInCheck
   simp [h]
-
--- ------------------------------------------
--- castling helper consequences
--- ------------------------------------------
 
 theorem castlePathSafe_implies_hasRook
   (s : GameState) (m : Move)
@@ -200,10 +184,6 @@ theorem castlePathSafe_implies_midSafe
             { row := m.colourPiecePos.pos.row, col := midCol } = true := hDecomp.2.2
       simpa [midExpr, hMid] using hMidSafe
 
--- ------------------------------------------
--- legal move core
--- ------------------------------------------
-
 theorem legal_implies_pseudoLegal
   (s : GameState) (m : Move)
   (h : isLegalMove s m = true) :
@@ -249,10 +229,6 @@ theorem legal_castling_implies_castlePathSafe
     exact hDecomp.2
   simpa [hCastle] using hRight
 
--- ------------------------------------------
--- checkmate / game-over
--- ------------------------------------------
-
 theorem isCheckmate_implies_isInCheck
   (s : GameState) (c : Colour)
   (h : isCheckmate s c = true) :
@@ -287,10 +263,6 @@ theorem isGameOver_ifEitherCheckmate
       simp [hw]
   | inr hb =>
       simp [hb]
-
--- ------------------------------------------
--- castling history specialization
--- ------------------------------------------
 
 theorem castling_history_prepends_move
   (s : GameState) (m : Move)

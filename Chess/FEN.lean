@@ -12,7 +12,6 @@ def charToPiece (c : Char) : Option ColourPiece :=
   | 'k' => some ⟨.king, .black⟩   | 'K' => some ⟨.king, .white⟩
   | _   => none
 
-/-- Helper to expand FEN digits (e.g., '3' -> [none, none, none]) -/
 def expandFenDigit (c : Char) : List Square :=
   match c with
   | '1' => List.replicate 1 none
@@ -39,11 +38,9 @@ def parseRankToVector (s : String) : Option (Vector Square 8) :=
   else
     none
 
-/-- Parses the board string (8 ranks) and proves structure -/
 def parseBoardToVector (s : String) : Option Board :=
   let rankStrings := s.splitOn "/"
   let maybeRanks := rankStrings.map parseRankToVector
-  -- Check if we have exactly 8 valid ranks
   let rec extract (l : List (Option (Vector Square 8))) : Option (List (Vector Square 8)) :=
     match l with
     | [] => some []
@@ -71,7 +68,6 @@ def parseEnPassant (s : String) : Option (Fin 8) :=
     if h : val < 8 then some ⟨val, h⟩ else none
   | _ => none
 
-/-- Creates an empty board for the 'invalid' state fallback -/
 def emptyBoard : Board :=
   let row : Vector Square 8 := ⟨List.replicate 8 none |>.toArray, rfl⟩
   ⟨List.replicate 8 row |>.toArray, rfl⟩

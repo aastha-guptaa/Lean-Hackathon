@@ -2,10 +2,6 @@ import Chess.Model
 import Chess.Display
 import Chess.Model
 
--- ==========================================
--- Helpers
--- ==========================================
-
 def wp (p : Piece) : Square := some { piece := p, colour := Colour.white }
 def bp (p : Piece) : Square := some { piece := p, colour := Colour.black }
 def em : Square := none
@@ -49,16 +45,9 @@ deriving instance Repr for Colour
 deriving instance Repr for ColourPiece
 deriving instance Repr for Pos
 
--- ==========================================
--- TEST: Board access
--- ==========================================
 #eval startingBoard.getSquare (mkPos 0 0)   -- ♖
 #eval startingBoard.getSquare (mkPos 7 4)   -- ♚
 #eval startingBoard.getSquare (mkPos 3 3)   -- □
-
--- ==========================================
--- TEST: isPseudoLegalMove
--- ==========================================
 #eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 2 4)    -- true
 #eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 3 4)    -- true
 #eval isPseudoLegalMove startState (mkMove .pawn .white 1 4 4 4)    -- false
@@ -70,10 +59,6 @@ deriving instance Repr for Pos
 #eval isPseudoLegalMove startState (mkMove .rook .white 0 0 2 0)    -- false
 #eval isPseudoLegalMove startState (mkMove .bishop .white 0 2 2 4)  -- false
 #eval isPseudoLegalMove startState (mkMove .queen .white 0 3 2 3)   -- false
-
--- ==========================================
--- TEST: 5-move Italian Game opening
--- ==========================================
 
 -- Move 1: White e2→e4
 def state1 := startState.makeMove (mkMove .pawn .white 1 4 3 4)
@@ -87,16 +72,8 @@ def state4 := state3.makeMove (mkMove .knight .black 7 1 5 2)
 def state5 := state4.makeMove (mkMove .bishop .white 0 5 3 2)
 #eval state5.valid                              -- true
 
--- ==========================================
--- TEST: Illegal move (white tries to move on black's turn)
--- ==========================================
 def stateIllegal := state5.makeMove (mkMove .pawn .white 1 3 2 3)
 #eval stateIllegal.valid                        -- false
-
--- ==========================================
--- TEST: The Game of the Century (Byrne vs. Fischer, 1956)
--- 41 moves (82 plies), kingside castling, many captures, and a beautiful checkmate!
--- ==========================================
 
 /-- Chain multiple moves, returning the final GameState -/
 def playMoves (state : GameState) (moves : List Move) : GameState :=
@@ -266,13 +243,11 @@ def gameOfTheCenturyMoves : List Move := [
   -- Kc1
   mkMove .king .white 0 1 0 2,
   -- Rc2#
-  mkMove .rook .black 1 0 1 2,
-  mkMove .queen .white 7 1 7 2
+  mkMove .rook .black 1 0 1 2
 ]
 
 def finalState := playMoves startState gameOfTheCenturyMoves
 
--- Should be true if the entire 41-move game successfully evaluated
 #eval finalState.valid
 -- Total moves played should be 82
 #eval finalState.moveNum
@@ -293,9 +268,6 @@ def checkmatestate := playMoves startState (gameOfTheCenturyMoves.take 79)
 #eval checkmatestate.isAnyCheckmate
 
 
--- ==========================================
--- TEST: Verify Castling (Move 4 for Black)
--- ==========================================
 -- We take the first 8 half-moves (which ends exactly after Black's O-O)
 def stateAfterCastling := playMoves startState (gameOfTheCenturyMoves.take 8)
 
@@ -312,9 +284,6 @@ def stateAfterCastling := playMoves startState (gameOfTheCenturyMoves.take 8)
 -- Let's view the entire board after castling!
 #eval stateAfterCastling.board
 
--- ==========================================
--- TEST: En Passant Capture
--- ==========================================
 -- 1. e4 a6
 -- 2. e5 d5 (d pawn double pushes alongside e5 pawn)
 -- 3. exd6 e.p.
@@ -352,9 +321,6 @@ def epState5 := epState4.makeMove epMove5
 -- Board after 3. exd6 e.p. (White pawn captures diagonally, Black pawn vanishes)
 #eval epState5.board
 
--- ==========================================
--- TEST: Check and Legality logic (isInCheck, isLegalMove)
--- ==========================================
 -- Let's take the Game of the Century up to move 32 (16... Rfe8+)
 def stateAtCheck := playMoves startState (gameOfTheCenturyMoves.take 32)
 
@@ -369,9 +335,6 @@ def kf1Move := mkMove .king .white 0 4 0 5
 def illegalPawnMove := mkMove .pawn .white 1 0 2 0
 #eval stateAtCheck.isLegalMove illegalPawnMove
 
--- ==========================================
--- TEST: Pawn Underpromotion
--- ==========================================
 -- We will setup a custom game where a pawn promotes.
 -- 1. e4 d5
 -- 2. exd5 Nf6

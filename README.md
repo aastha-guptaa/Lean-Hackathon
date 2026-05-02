@@ -1,61 +1,55 @@
-# Chess
+# Verified LLM Chess: Mate-in-N Solver
 
+## Origin
+This project was built during the **LeanLang for Verified
+Autonomy Hackathon** (April 17–18 + online through May 1, 2026) at the **Indian Institute of Science (IISc),
+Bangalore**.
+Sponsored by **[Emergence AI](https://www.emergence.ai)**
+Organized by **[Emergence India Labs]
+(https://east.emergence.ai)** in collaboration with
+**IISc Bangalore**.
+
+## Problem Objective
+The goal of this project is to create a formally verified bridge between Large Language Models (LLMs) and a mathematical proof engine (Lean 4). Specifically, it targets **Chess Mate-in-N puzzles**, where an LLM suggests a sequence of moves to achieve checkmate, and Lean 4 rigorously verifies that:
+1. Every move in the sequence is physically legal according to the rules of chess.
+2. The final state is a mathematically sound checkmate.
+
+## Setup
 Create a Python venv with the `pydantic` and `openai` modules installed.
-
-Ensure that your OpenAI API Key is stored in the `OPENAI_API_KEY` env variable.
-
+Ensure that your OpenAI API Key is stored in the `OPENAI_API_KEY` environment variable.
 Activate the Python venv, and navigate to the root of the repo.
 
-Build the Lean project.
-
+## Running the Tool
+1. Build the Lean project:
 ```bash
 lake build
 ```
 
-Run the following to get the LLM to solve the checkmate puzzle:
-
+2. Run the solver with a FEN string:
 ```bash
 lake exe chess "<FEN>"
 ```
-
-where you replace \<FEN\> with the FEN notation of the checkmate puzzle.
-
 Example:
-
 ```bash
 lake exe chess "1rb5/4r3/3p1npb/3kp1P1/1P3P1P/5nR1/2Q1BK2/bN4NR w - - 3 61"
 ```
 
-Output:
+## Suggested Puzzles
+You can find several Mate-in-N puzzles in FEN notation to test here:
+*   [Mate in 2 Puzzles](https://wtharvey.com/m8n2.txt)
+*   [Mate in 3 Puzzles](https://wtharvey.com/m8n3.txt)
+*   [Mate in 4 Puzzles](https://wtharvey.com/m8n4.txt)
 
-```
-Output from LLM: {
-  "moves": [
-    {
-      "piece": "queen",
-      "color": "white",
-      "initial_position": "c2",
-      "final_position": "c4"
-    }
-  ]
-}
+## Acknowledgments
+This project was made possible by:
+- **Emergence AI** — Hackathon sponsor
+- **Emergence India Labs** — Event organizer and
+research direction
+- **Indian Institute of Science (IISc), Bangalore** —
+Academic partner, hackathon co-design, tutorials,
+and mentorship
 
-=================================
-Puzzle Successfully Solved!
-The board positions to checkmate:
-
-
-Valid: true
-Turn: black
-Move Number: 62
-□♖♗□□□□□
-□□□□♖□□□
-□□□♙□♘♙♗
-□□□♔♙□♟□
-□♟♛□□♟□♟
-□□□□□♘♜□
-□□□□♝♚□□
-♗♞□□□□♞♜
-```
-
-You can set the model you want to use at the start of `script.py`. Use `gpt-5` onwards for better results.
+## Links
+- [Hackathon Page](https://east.emergence.ai/hackathon-april2026.html)
+- [Emergence India Labs](https://east.emergence.ai)
+- [Emergence AI](https://www.emergence.ai)

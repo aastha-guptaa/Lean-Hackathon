@@ -19,22 +19,8 @@ structure ColourPiece where
   colour : Colour
 
 abbrev Square := Option ColourPiece
---abbrev Square := Option <| Piece × Colour
--- pawn, white
--- It is either none, or there is a piece, colour type
--- Like Maybe in Haskell
--- problem is well fst, etc
-
--- board is unfoldable definition.
--- inline macro in c
--- expression
---abbrev Board (r c : Nat) := Vector (Vector Square c) r
 
 abbrev Board := Vector (Vector Square 8) 8
--- take a board, piece and coordinates
--- possible positions move to
-
---abbrev Pos := Fin 8 × Fin 8
 
 structure Pos where
   row : Fin 8
@@ -45,21 +31,12 @@ structure ColourPiecePos where
   colourPiece : ColourPiece
   pos : Pos
 
--- struct use, kind of like named tuple
--- Take a board, and a function and then apply it?
-
--- needs to define piece first
-
--- given a pos, return piecepos
-
 structure SquarePos where
   square : Square
   pos : Pos
 
 def Board.getSquare (board: Board) (pos: Pos) : Square :=
   (board.get pos.row).get pos.col
-
---vector.se
 
 def Board.setSquare (board: Board) (pos: Pos) (square: Square) : Board :=
   board.set pos.row ((board.get pos.row).set pos.col square)
@@ -79,10 +56,6 @@ def Board.forceMove (board : Board) (move : Move) : Board :=
   let boardWithoutPiece := board.setSquare move.colourPiecePos.pos none
   boardWithoutPiece.setSquare move.toPos (some promotedPiece)
 
--- ==========================================
--- Game State (needed for castling & en passant)
--- ==========================================
-
 /-- Tracks whether castling is still allowed for each side. -/
 structure CastlingRights where
   whiteKingSide  : Bool := true
@@ -99,10 +72,6 @@ structure GameState where
   valid     : Bool
   moveNum   : Nat
   history   : List Move
-
--- ==========================================
--- Helper functions
--- ==========================================
 
 /-- Signed distance between two Fin 8 values. -/
 def posDist (a b : Fin 8) : Int :=
@@ -160,14 +129,10 @@ def isPathClear (board : Board) (fromPos toPos : Pos) : Bool :=
             match intToFin8 c, intToFin8 r with
             | some cf, some rf =>
               match board.getSquare { col := cf, row := rf } with
-              | some _ => false   -- blocked!
+              | some _ => false
               | none   => loop (i + 1) fuel'
-            | _, _ => false       -- out of bounds
+            | _, _ => false
       loop 1 7  -- at most 7 intermediate squares on an 8×8 board
-
--- ==========================================
--- Piece-specific move rules
--- ==========================================
 
 def isValidKnightMove (fromPos toPos : Pos) : Bool :=
   let dc := (posDist toPos.col fromPos.col).natAbs
@@ -190,9 +155,7 @@ def isValidQueenMove (board : Board) (fromPos toPos : Pos) : Bool :=
 def isValidKingMove (state : GameState) (fromPos toPos : Pos) : Bool :=
   let dc := posDist toPos.col fromPos.col
   let dr := posDist toPos.row fromPos.row
-  -- Standard one-square move
   if dc.natAbs ≤ 1 && dr.natAbs ≤ 1 && (dc != 0 || dr != 0) then true
-  -- Castling: king moves exactly 2 squares horizontally
   else if dc.natAbs == 2 && dr == 0 then
     let baseRow : Fin 8 := match state.turn with | .white => ⟨0, by omega⟩ | .black => ⟨7, by omega⟩
     if fromPos.col.val == 4 && fromPos.row == baseRow then
@@ -215,22 +178,6 @@ def validPawnMoveHelper (move : Int × Int) (isUp : Bool) : Bool :=
   else
     (-1,-2)
   (move == (dir.2,0)) || (move == (dir.1,0)) || (move == (dir.1,dir.1))
-
--- def isValidPawnMove (board : Board) (colour : Colour) (fromPos toPos : Pos) : Bool :=
---   let move := getDists fromPos toPos
---   let (dr, dc) := move
---   match colour with
---   | .white =>
---     if validPawnMoveHelper move true then
---       sorry
---     else
---       false
---   | .black =>
---     if validPawnMoveHelper move false then
---       sorry
---     else
---       false
-
 
 def isSquareEmpty (board : Board) (pos : Pos) : Bool :=
   (board.getSquare pos).isNone
@@ -283,10 +230,6 @@ def isValidPawnMove (state : GameState) (move : Move) : Bool :=
                 | none => false
             else false
 
--- ==========================================
--- Main move validator
--- ==========================================
-
 /-- Checks if a move is pseudo-legal: correct piece geometry, path is clear,
     not capturing own piece. Does NOT check if the king is left in check. -/
 def isPseudoLegalMove (state : GameState) (move : Move) : Bool :=
@@ -324,10 +267,6 @@ def Board.canMove (board: Board) (colourPiecePos: ColourPiecePos) (destPos: Pos)
   }
   let move : Move := { colourPiecePos := colourPiecePos, toPos := destPos }
   isPseudoLegalMove state move
-
--- ==========================================
--- Applying a legal move to produce a new GameState
--- ==========================================
 
 /-- Flip the turn colour. -/
 def Colour.opponent : Colour → Colour
@@ -640,9 +579,7 @@ def GameState.isValidMoves (state : GameState) (moves : List Move) : Bool :=
 -/
 def GameState.getStatesSequence (state : GameState) (moves : List Move) : List GameState :=
   match moves with
-  -- Base case: No more moves to apply, return an empty list of results.
   | [] => []
-  -- Recursive case: Apply the first move, then recurse with the remaining moves.
   | m :: ms =>
     let nextState := state.makeValidMove m
     nextState :: nextState.getStatesSequence ms
