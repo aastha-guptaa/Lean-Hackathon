@@ -1,8 +1,13 @@
 import sys
 import json
+import os
+from pathlib import Path
 from typing import List, Literal
 from pydantic import BaseModel, Field
 from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=True)
 
 openai_model = "gpt-5"
 
@@ -18,6 +23,10 @@ class CheckmateSolution(BaseModel):
     moves: List[ChessMove]
 
 def solve_chess_puzzle(fen: str):
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError(
+            "OPENAI_API_KEY not found. Set it in a .env file or export it in your shell."
+        )
     client = OpenAI()
 
     instructions = (
