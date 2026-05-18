@@ -6,3 +6,4 @@ import Chess.Legal
 import Chess.LegalProofs
 import Chess.FEN
 import Chess.MoveParser
+import Chess.Proofs
