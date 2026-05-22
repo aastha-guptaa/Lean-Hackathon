@@ -1,0 +1,153 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Chess Provers in Lean}
+\author{Lean Hackathon Team}
+\date{May 22, 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Agenda}
+\begin{itemize}
+  \item Current System
+  \vspace{0.8cm}
+  \item Alternative System
+\end{itemize}
+\end{frame}
+
+\section{What We Did}
+
+\begin{frame}{Approach Followed}
+\begin{itemize}
+  \item Built a proof-aware chess validation system in Lean.
+  \item Input FEN, parse LLM-proposed moves, verify legality in Lean.
+  \item Success only when the validated sequence ends in checkmate.
+  \item Design split: heuristic generation (LLM), formal acceptance (Lean rules + proofs).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{System Map: \texttt{Main.lean}}
+\begin{itemize}
+  \item Entry flow in \texttt{main}:
+  \begin{enumerate}
+    \item Parse input FEN using \texttt{fenToGameState}
+    \item Call Python client: \texttt{script.py <fen>}
+    \item Parse JSON response via \texttt{parsePythonOutputToMoves}
+    \item Validate sequence with \texttt{state.isValidMoves}
+    \item Execute \texttt{playMoves} and check \texttt{isAnyCheckmate}
+  \end{enumerate}
+  \item Output includes success/failure and board-state sequence for valid mates.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Trusting Initial State: \texttt{Chess/FEN.lean}}
+\begin{itemize}
+  \item Example FEN: \texttt{r2k2nr/pp1b1Q1p/2n4b/3N4/3q4/3P4/PPP3PP/4RR1K w - - 1 0}
+  \item \texttt{fenToGameState} has the following helpers: \\
+  \texttt{charToPiece, expandFenDigit, parseRankToVector, parseBoardToVector, parseCastling, parseEnPassant.}
+  \item Invalid FEN sets \texttt{valid := false} with a safe fallback board/state.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{LLM Output to Typed Moves: \texttt{Chess/MoveParser.lean}}
+\begin{itemize}
+  \item JSON schema represented by \texttt{JsonMove} and \texttt{JsonCheckmateSolution}.
+  \item Conversion chain:
+  \begin{itemize}
+    \item string decoders: \texttt{stringToPiece}, \texttt{stringToColour}, \texttt{stringToPos}
+    \item structural conversion: \texttt{convertMoves : List JsonMove -> List Move}
+  \end{itemize}
+  \item \texttt{parsePythonOutputToMoves} is the typed boundary from untrusted JSON to Lean moves.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Model Core (1): Data Types and Pseudo-Legality}
+\begin{itemize}
+  \item In \texttt{Chess/Model.lean}: core types \texttt{GameState}, \texttt{Move}, \texttt{Board}, \texttt{Pos}.
+  \item Piece-specific move semantics encoded in:
+  \begin{itemize}
+    \item \texttt{isValidPawnMove}, \texttt{isValidKnightMove}, \texttt{isValidBishopMove}, etc.
+  \end{itemize}
+  \item \texttt{isPseudoLegalMove} enforces geometry/path/ownership constraints,
+  but not king-safety after move.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Model Core (2): Check, Legality, and Play Pipeline}
+\begin{itemize}
+  \item \texttt{isInCheck}: determines whether king is attacked.
+  \item \texttt{isLegalMove}: strengthens pseudo-legality with king safety.
+  \item State-transition and sequence validators:
+  \begin{itemize}
+    \item \texttt{makeValidMove}
+    \item \texttt{isValidMoves}
+    \item \texttt{playMoves}
+  \end{itemize}
+  \item End condition functions:
+  \begin{itemize}
+    \item \texttt{isCheckmate}
+    \item \texttt{isAnyCheckmate}
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Proof Coverage: \texttt{Chess/LegalProofs.lean}}
+\begin{itemize}
+  \item Focus theorem: \texttt{legal\_implies\_kingSafeAfter}
+  \item Meaning: if \texttt{isLegalMove s m = true}, then
+  \texttt{isInCheck (s.makeMove m) s.turn = false}.
+  \item This links boolean legality checks to a concrete king-safety guarantee.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Proof Coverage: \texttt{Chess/Proofs.lean}}
+\begin{itemize}
+  \item \texttt{no\_friendly\_fire}:
+  valid target squares never contain a same-color piece.
+  \item \texttt{bishop\_stays\_on\_colour}:
+  bishop moves preserve board-square parity (color class).
+  \item Role: demonstrate local rule invariants and movement properties as machine-checked facts.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{LLM Client: How It Works}
+\centering
+\Huge Demo
+\end{frame}
+
+\section{What Could Have Been}
+
+\begin{frame}{Alternative Approach from \texttt{Mal-Pat/Chess-Lean}}
+\begin{itemize}
+  \item Repo centers around \texttt{ChessLean/Basic.lean}.
+  \item Architecture leans toward internal move generation:
+  \begin{itemize}
+    \item \texttt{generateAllPseudoLegalMoves}
+    \item \texttt{IsPseudoLegalMove} as membership
+    \item \texttt{IsLegalMove := pseudo-legal \&\& not-in-check}
+  \end{itemize}
+  \item Execution style: \texttt{playMove}/\texttt{play} over generated legal-space transitions.
+\end{itemize}
+\end{frame}
+
+\section{Alternative Chess Problems We Could Solve}
+
+\begin{frame}{Closing}
+\begin{itemize}
+  \item We implemented a practical hybrid: external generation, internal formal acceptance.
+  \item Proofs already anchor key safety and movement invariants.
+  \item Next scope can expand from checkmate solving to broader verified chess reasoning.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\centering
+\Huge Thank You
+\end{frame}
+
+\end{document}
